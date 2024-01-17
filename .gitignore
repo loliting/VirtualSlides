@@ -1,3 +1,6 @@
 .vscode/
 /guest/kernel/linux-*
 /guest/kernel/bzImage
+/guest/*.qcow2
+/guest/*.tar
+/guest/init
