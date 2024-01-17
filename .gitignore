@@ -1,1 +1,3 @@
 .vscode/
+/guest/kernel/linux-*
+/guest/kernel/bzImage
