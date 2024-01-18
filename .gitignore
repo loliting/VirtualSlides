@@ -4,3 +4,4 @@
 /guest/*.qcow2
 /guest/*.tar
 /guest/init
+/build
