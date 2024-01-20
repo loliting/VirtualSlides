@@ -59,7 +59,7 @@ void Presentation::decompressVslidesArchive(QString path){
                     zip_close(zipArchive);
                     throw PresentationException("Failed to decompress '" + path + "'");
                 }
-                file.write(buffor, BUFFOR_SIZE);
+                file.write(buffor, length);
                 sum += length;
             }
             file.close();
