@@ -2,19 +2,28 @@
 #define PRESENTATIONWINDOW_HPP
 
 #include <QtWidgets/QMainWindow>
+#include <QtWidgets/QAction>
+
+#include "Presentation.hpp"
 
 class PresentationWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    static PresentationWindow* Instance();
-    static void CleanUp();
+    PresentationWindow(Presentation* presentation);
 
 private:
-    PresentationWindow();
+    Presentation* m_presentation;
     ~PresentationWindow() override { };
 
-    static PresentationWindow* m_instance;
+    quint64 m_currentSlideIndex = 0;
+    QAction* m_nextSlideAction = new QAction();
+    QAction* m_previousSlideAction = new QAction();
+public slots:
+    void nextSlide();
+    void previousSlide();
+protected:
+    void resizeEvent(QResizeEvent *event);
 };
 
 #endif // PRESENTATIONWINDOW_HPP

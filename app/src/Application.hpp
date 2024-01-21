@@ -3,14 +3,17 @@
 
 #include <QApplication>
 
+#include "PresentationWindow.hpp"
+
 class Application : public QApplication
 {
 Q_OBJECT
 
 public:
-    
     static Application* Instance();
     static Application* Instance(int &argc, char* argv[]);
+
+    PresentationWindow* addWindow(QString presentationPath);
     
     static void CleanUp();
 private:
