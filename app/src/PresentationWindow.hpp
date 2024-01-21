@@ -23,7 +23,7 @@ public slots:
     void nextSlide();
     void previousSlide();
 protected:
-    void resizeEvent(QResizeEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif // PRESENTATIONWINDOW_HPP

@@ -23,15 +23,15 @@ class PresentationElement : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(QWidget* widget READ widget WRITE setWidget NOTIFY widgetSet)
+    Q_PROPERTY(QWidget* widget READ widget WRITE setWidget NOTIFY widgetSet);
    
-    Q_PROPERTY(qreal x READ x WRITE setX NOTIFY positionChanged)
-    Q_PROPERTY(qreal y READ y WRITE setY NOTIFY positionChanged)
-    Q_PROPERTY(QPointF pos READ pos WRITE setPos NOTIFY positionChanged)
+    Q_PROPERTY(qreal x READ x WRITE setX NOTIFY positionChanged);
+    Q_PROPERTY(qreal y READ y WRITE setY NOTIFY positionChanged);
+    Q_PROPERTY(QPointF pos READ pos WRITE setPos NOTIFY positionChanged);
 
-    Q_PROPERTY(qreal width READ width WRITE setWidth NOTIFY sizeChanged)
-    Q_PROPERTY(qreal height READ height WRITE setHeight NOTIFY sizeChanged)
-    Q_PROPERTY(QSizeF size READ size WRITE setSize NOTIFY sizeChanged)
+    Q_PROPERTY(qreal width READ width WRITE setWidth NOTIFY sizeChanged);
+    Q_PROPERTY(qreal height READ height WRITE setHeight NOTIFY sizeChanged);
+    Q_PROPERTY(QSizeF size READ size WRITE setSize NOTIFY sizeChanged);
 public:
     PresentationElement();
     PresentationElement(qreal x, qreal y, qreal width, qreal height);
@@ -101,7 +101,7 @@ private:
     QList<PresentationElement*> m_elements;
     
 protected:
-    void resizeEvent(QResizeEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
 
     friend class Presentation;
 };
@@ -119,7 +119,7 @@ public:
     QString m_title;
     QList<PresentationSlide*> m_slides;
 private:
-    QTemporaryDir m_tmpDir = QTemporaryDir();
+    QTemporaryDir m_tmpDir;
 };
 
 #endif // PRESENTATION_HPP
