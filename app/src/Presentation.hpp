@@ -77,6 +77,16 @@ private:
     QLabel* m_widget;
 };
 
+class PresentationImageElement : public PresentationElement
+{
+    Q_OBJECT
+public:
+    PresentationImageElement(QWidget* parent, QPixmap img);
+    PresentationImageElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, QPixmap img);
+    ~PresentationImageElement();
+private:
+    QLabel* m_widget;
+};
 
 class PresentationSlide : public QLabel 
 {

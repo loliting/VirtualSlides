@@ -1,5 +1,6 @@
 #include "Presentation.hpp"
 
+#include <QtCore/QDebug>
 #include <QtCore/QFile>
 #include <QtGui/QResizeEvent>
 
@@ -101,6 +102,27 @@ PresentationTextBoxElement::PresentationTextBoxElement(QWidget* parent, qreal x,
 }
 
 PresentationTextBoxElement::~PresentationTextBoxElement() {
+    delete m_widget;
+}
+
+PresentationImageElement::PresentationImageElement(QWidget* parent, QPixmap img)
+    : PresentationElement()
+{
+    m_widget = new QLabel(parent);
+    setWidget(m_widget);
+
+    m_widget->setScaledContents(true);
+    m_widget->setPixmap(img);
+    m_widget->show();
+}
+
+PresentationImageElement::PresentationImageElement(QWidget* parent, qreal x, qreal y, qreal height, qreal width, QPixmap img)
+    : PresentationElement(x, y, width, height)
+{
+    PresentationImageElement(parent, img);
+}
+
+PresentationImageElement::~PresentationImageElement() {
     delete m_widget;
 }
 
@@ -219,8 +241,10 @@ void Presentation::parseXml() {
     xml_node<char>* slideNode = rootNode->first_node("Slide", 0UL, false);
     xml_attribute<char>* bgAttribute;
     
-    xml_node<char>* textBoxNode;
+    xml_node<char>* tmpNode;
     xml_node<char>* textNode;
+
+    xml_attribute<char>* srcAttribute;
 
     if(slideNode == nullptr){
         QString exceptionStr = "Failed to parse root.xml: ";
@@ -246,22 +270,46 @@ void Presentation::parseXml() {
             slide = new PresentationSlide();
         }
         
-        textBoxNode = slideNode->first_node("TextBox", 0UL, false);
-        while(textBoxNode){
-            textNode = textBoxNode->first_node("Text", 0UL, false);
-            std::stringstream textNodeSs;
-            textNodeSs << *textNode;
-            std::string text = textNodeSs.str();
-            text = text.substr(TEXT_NODE_SZ, text.length() - TEXT_NODE_SZ * 2);
+        tmpNode = slideNode->first_node(nullptr, 0UL, false);
+        while(tmpNode){
+            QString nodeStr(tmpNode->name());
+            nodeStr = nodeStr.toLower();
+            if(nodeStr == QString("TextBox").toLower()){
+                textNode = tmpNode->first_node("Text", 0UL, false);
+                std::stringstream textNodeSs;
+                textNodeSs << *textNode;
+                std::string text = textNodeSs.str();
+                text = text.substr(TEXT_NODE_SZ, text.length() - TEXT_NODE_SZ * 2);
 
-            PresentationTextBoxElement* tB = nullptr;
-            tB = new PresentationTextBoxElement(slide, QString::fromStdString(text));
-            parseXmlDimensions(textBoxNode, tB);
+                PresentationTextBoxElement* tB = nullptr;
+                tB = new PresentationTextBoxElement(slide, QString::fromStdString(text));
+                parseXmlDimensions(tmpNode, tB);
 
-            slide->m_elements.append(tB);
-            textBoxNode = textBoxNode->next_sibling("TextBox", 0UL, false);
+                slide->m_elements.append(tB);
+            }
+            else if(nodeStr == QString("Image").toLower()){
+                PresentationImageElement* imageElement = nullptr;
+                QPixmap img;
+                srcAttribute = tmpNode->first_attribute("src", 0UL, false);
+                if(srcAttribute == nullptr){
+                    qWarning() << "Image node does not contain \"src\" attribute";
+                }
+                else if(isFileValid(srcAttribute->value())){
+                    img = QPixmap(srcAttribute->value());
+                }
+                else{
+                    qWarning() << "Image src: \"" + QString(srcAttribute->value()) + "\" is not valid";
+                }
+                imageElement = new PresentationImageElement(slide, img);
+                parseXmlDimensions(tmpNode, imageElement);
+
+                slide->m_elements.append(imageElement);
+            }
+            else{
+                qWarning() << "Unknown node: <" + nodeStr + ">. Ignoring.";
+            }
+            tmpNode = tmpNode->next_sibling(nullptr, 0UL, false);
         }
-
         m_slides.append(slide);
         slideNode = slideNode->next_sibling("Slide", 0UL, false);
     }
@@ -308,6 +356,7 @@ bool Presentation::isFileValid(QString path) {
     if(fi.exists() == false){
         return false;
     }
+
     QString absoluteTmpDirPath = m_tmpDir.path();
     absoluteTmpDirPath = QFileInfo(absoluteTmpDirPath).absoluteFilePath();
     if(fi.absoluteFilePath().contains(absoluteTmpDirPath) == false){
