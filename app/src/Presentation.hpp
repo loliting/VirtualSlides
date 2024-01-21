@@ -82,12 +82,12 @@ class PresentationSlide : public QLabel
 {
     Q_OBJECT
 public:
-    PresentationSlide(QString bg = QString());
+    PresentationSlide(QColor bg = QColor("white"));
+    PresentationSlide(QPixmap bg);
     ~PresentationSlide();
 signals:
     void resize(int w, int h);
 private:
-    QString m_bg;
     QList<PresentationElement*> m_elements;
     
 protected:
@@ -102,6 +102,7 @@ public:
     Presentation(QString path);
     ~Presentation();
 private:
+    bool isFileValid(QString path);
     void decompressVslidesArchive(QString path);
     void parseXml();
 public:

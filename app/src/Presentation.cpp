@@ -104,10 +104,14 @@ PresentationTextBoxElement::~PresentationTextBoxElement() {
     delete m_widget;
 }
 
-PresentationSlide::PresentationSlide(QString bg) {
-    m_bg = bg;
+PresentationSlide::PresentationSlide(QColor bg) {
     setAutoFillBackground(true);
-    setPalette(QPalette(QColor(m_bg)));
+    setPalette(QPalette(bg));
+}
+
+PresentationSlide::PresentationSlide(QPixmap bg) {
+    setPixmap(bg);
+    setScaledContents(true);
 }
 
 PresentationSlide::~PresentationSlide() {
@@ -228,7 +232,15 @@ void Presentation::parseXml() {
 
         bgAttribute = slideNode->first_attribute("bg", 0UL, false);
         if(bgAttribute){
-            slide = new PresentationSlide(bgAttribute->value());
+            if(isFileValid(bgAttribute->value())){
+                slide = new PresentationSlide(QPixmap(bgAttribute->value()));
+            }
+            else if(QColor::isValidColor(bgAttribute->value())){
+                slide = new PresentationSlide(QColor(bgAttribute->value()));
+            }
+            else{
+                slide = new PresentationSlide();
+            }
         }
         else{
             slide = new PresentationSlide();
@@ -287,4 +299,20 @@ Presentation::~Presentation() {
     for(auto slide : m_slides){
         delete slide;
     }
+}
+
+bool Presentation::isFileValid(QString path) {
+    assert(m_tmpDir.isValid() == true);
+    path = "./" + path;
+    QFileInfo fi(path);
+    if(fi.exists() == false){
+        return false;
+    }
+    QString absoluteTmpDirPath = m_tmpDir.path();
+    absoluteTmpDirPath = QFileInfo(absoluteTmpDirPath).absoluteFilePath();
+    if(fi.absoluteFilePath().contains(absoluteTmpDirPath) == false){
+        return false;
+    }
+
+    return true;
 }
