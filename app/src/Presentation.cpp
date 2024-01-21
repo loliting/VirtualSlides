@@ -169,7 +169,7 @@ void Presentation::decompressVslidesArchive(QString path) {
     for(size_t i = 0; i < zEntriesCount; ++i){
         if(zip_stat_index(zipArchive, i, 0, &zStat) == -1){
             zip_error_t* error = zip_get_error(zipArchive);
-            QString exceptionString = "Failed to decompress '" + path + "': ";
+            QString exceptionString = "Failed to decompress '" + path + "': "
                 + zip_error_strerror(error);
             zip_close(zipArchive);
             throw PresentationException(exceptionString);
