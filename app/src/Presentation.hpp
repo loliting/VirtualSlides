@@ -111,9 +111,9 @@ struct Presentation{
 public:
     Presentation(QString path);
     ~Presentation();
+    bool isFileValid(QString path);
     QString getFilePath(QString path);
 private:
-    bool isFileValid(QString path);
     void decompressVslidesArchive(QString path);
     void parseXml();
 public:
