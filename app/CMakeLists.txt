@@ -6,6 +6,7 @@ find_package(QTermWidget5 REQUIRED)
 
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_CXX_STANDARD 14)
 
 set(VS_SOURCES
     src/main.cpp
@@ -15,6 +16,11 @@ set(VS_SOURCES
     src/PresentationWindow.hpp
     src/Presentation.cpp
     src/Presentation.hpp
+    src/VirtualMachineManager.cpp
+    src/VirtualMachineManager.hpp
+    src/VirtualMachine.cpp
+    src/VirtualMachine.hpp
+    src/Network.hpp
 )
 
 add_executable(virtual-slides ${VS_SOURCES})
