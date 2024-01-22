@@ -65,3 +65,9 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
 
     vmsXml.close();
 }
+
+VirtualMachineManager::~VirtualMachineManager(){
+    for(auto vm : m_virtualMachines){
+        delete vm;
+    }
+}

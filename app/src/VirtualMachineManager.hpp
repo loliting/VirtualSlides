@@ -12,6 +12,7 @@ class VirtualMachineManager : QObject
     Q_OBJECT
 public:
     VirtualMachineManager(QString vmsXmlPath);
+    ~VirtualMachineManager();
 private:
     QMap<QString, VirtualMachine*> m_virtualMachines;
 };
