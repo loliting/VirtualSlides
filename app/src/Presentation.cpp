@@ -163,7 +163,7 @@ void Presentation::decompressVslidesArchive(QString path) {
         throw PresentationException(exceptionString);
     }
 
-    QDir cwd = QDir::current();
+    QDir tmpDir(m_tmpDir.path());
 
     size_t zEntriesCount = zip_get_num_entries(zipArchive, 0);
     for(size_t i = 0; i < zEntriesCount; ++i){
@@ -176,13 +176,13 @@ void Presentation::decompressVslidesArchive(QString path) {
         }
         QString fileName = QString(zStat.name);
         if(fileName[fileName.length() - 1] == '/'){
-            if(!cwd.mkpath(fileName)){
+            if(!tmpDir.mkpath(fileName)){
                 zip_close(zipArchive);
                 throw PresentationException("Failed to decompress '" + path + "'");
             }
         }
         else{
-            QFile file(fileName);
+            QFile file(m_tmpDir.path() + "/" + fileName);
             zf = zip_fopen_index(zipArchive, i, 0);
             if(file.open(QIODevice::WriteOnly) == false || zf == nullptr){
                 zip_close(zipArchive);
@@ -208,7 +208,7 @@ void Presentation::decompressVslidesArchive(QString path) {
 }
 
 void Presentation::parseXml() {
-    QFile rootXml("root.xml");
+    QFile rootXml(getFilePath("root.xml"));
 
     if(rootXml.open(QIODevice::ReadOnly) == false){
         throw PresentationException("File root.xml does not exists inside the archive");
@@ -257,7 +257,7 @@ void Presentation::parseXml() {
         bgAttribute = slideNode->first_attribute("bg", 0UL, false);
         if(bgAttribute){
             if(isFileValid(bgAttribute->value())){
-                slide = new PresentationSlide(QPixmap(bgAttribute->value()));
+                slide = new PresentationSlide(QPixmap(getFilePath(bgAttribute->value())));
             }
             else if(QColor::isValidColor(bgAttribute->value())){
                 slide = new PresentationSlide(QColor(bgAttribute->value()));
@@ -295,7 +295,7 @@ void Presentation::parseXml() {
                     qWarning() << "Image node does not contain \"src\" attribute";
                 }
                 else if(isFileValid(srcAttribute->value())){
-                    img = QPixmap(srcAttribute->value());
+                    img = QPixmap(getFilePath(srcAttribute->value()));
                 }
                 else{
                     qWarning() << "Image src: \"" + QString(srcAttribute->value()) + "\" is not valid";
@@ -321,11 +321,6 @@ Presentation::Presentation(QString path) {
     path = QFileInfo(path).absoluteFilePath();
     m_tmpDir.setAutoRemove(false);
 
-    QString oldCwd = QDir::currentPath();
-    if(!QDir::setCurrent(m_tmpDir.path())){
-        throw PresentationException("Failed to chdir into tmp dir");
-    }
-
     if(!m_tmpDir.isValid()){
         throw PresentationException(m_tmpDir.errorString());
     }
@@ -335,11 +330,9 @@ Presentation::Presentation(QString path) {
         parseXml();
     }
     catch(PresentationException &e){
-        QDir::setCurrent(oldCwd);
         m_tmpDir.remove();
         throw;
     }
-    QDir::setCurrent(oldCwd);
 }
 
 Presentation::~Presentation() {
@@ -351,7 +344,8 @@ Presentation::~Presentation() {
 
 bool Presentation::isFileValid(QString path) {
     assert(m_tmpDir.isValid() == true);
-    path = "./" + path;
+
+    path = m_tmpDir.path() + "/" + path;
     QFileInfo fi(path);
     if(fi.exists() == false){
         return false;
@@ -364,4 +358,14 @@ bool Presentation::isFileValid(QString path) {
     }
 
     return true;
+}
+
+QString Presentation::getFilePath(QString path){
+    if(isFileValid(path) == false){
+        return nullptr;
+    }
+
+    QFileInfo fi(m_tmpDir.path() + "/" + path);
+
+    return fi.absoluteFilePath();
 }
