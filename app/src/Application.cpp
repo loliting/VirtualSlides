@@ -34,6 +34,7 @@ PresentationWindow* Application::addWindow(QString presentationPath){
     }
 
     PresentationWindow* win = new PresentationWindow(presentation);
+    win->setAttribute(Qt::WA_DeleteOnClose);
     win->showFullScreen();
 
     return win;

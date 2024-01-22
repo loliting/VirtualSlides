@@ -10,11 +10,11 @@ class PresentationWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    PresentationWindow(Presentation* presentation);
+    explicit PresentationWindow(Presentation* presentation);
+    ~PresentationWindow();
 
 private:
     Presentation* m_presentation;
-    ~PresentationWindow() override { };
 
     quint64 m_currentSlideIndex = 0;
     QAction* m_nextSlideAction = new QAction();

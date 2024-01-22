@@ -21,6 +21,12 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
     addAction(m_previousSlideAction);
 }
 
+PresentationWindow::~PresentationWindow(){
+    delete m_presentation;
+    delete m_nextSlideAction;
+    delete m_previousSlideAction;
+}
+
 void PresentationWindow::resizeEvent(QResizeEvent *e) {
     m_presentation->m_slides[m_currentSlideIndex]->setFixedSize(e->size());
 
