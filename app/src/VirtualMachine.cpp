@@ -1,6 +1,7 @@
 #include "VirtualMachine.hpp"
 
 #include <QtCore/QDebug>
+#include <QtCore/QRegularExpression>
 
 using namespace rapidxml;
 
@@ -184,6 +185,9 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
                 FileObjective fO(objectiveNode);
                 if(fO.vmPath.isEmpty()){
                     qWarning() << "<file> node must have valid <path> subnode. Ignoring objective.";
+                }
+                else if(fO.regexMatch.isNull() == false && QRegularExpression(fO.regexMatch).isValid() == false){
+                    qWarning() << "<file> node contains <regex-march> subnode with invalid regex. Ignoring objective.";
                 }
                 else{
                     m_fileObjectives.append(fO);
