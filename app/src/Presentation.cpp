@@ -183,8 +183,12 @@ void Presentation::decompressVslidesArchive(QString path) {
         }
         else{
             QFile file(m_tmpDir.path() + "/" + fileName);
+            if(file.open(QIODevice::WriteOnly) == false){
+                zip_close(zipArchive);
+                throw PresentationException("Failed to decompress '" + path + "': " + file.errorString());
+            }
             zf = zip_fopen_index(zipArchive, i, 0);
-            if(file.open(QIODevice::WriteOnly) == false || zf == nullptr){
+            if(zf == nullptr){
                 zip_close(zipArchive);
                 throw PresentationException("Failed to decompress '" + path + "'");
             }
@@ -328,6 +332,8 @@ Presentation::Presentation(QString path) {
     try{
         decompressVslidesArchive(path);
         parseXml();
+        m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"));
+        m_netManager = new NetworkManager(getFilePath("nets.xml"));
     }
     catch(PresentationException &e){
         m_tmpDir.remove();
@@ -340,6 +346,8 @@ Presentation::~Presentation() {
     for(auto slide : m_slides){
         delete slide;
     }
+    delete m_netManager;
+    delete m_vmManager;
 }
 
 bool Presentation::isFileValid(QString path) {

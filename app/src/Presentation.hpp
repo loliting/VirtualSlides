@@ -8,6 +8,9 @@
 
 #include <exception>
 
+#include "VirtualMachineManager.hpp"
+#include "NetworkManager.hpp"
+
 class PresentationException : public std::exception
 {
 public:
@@ -121,6 +124,8 @@ public:
     QList<PresentationSlide*> m_slides;
 private:
     QTemporaryDir m_tmpDir;
+    VirtualMachineManager* m_vmManager;
+    NetworkManager* m_netManager;
 };
 
 #endif // PRESENTATION_HPP
