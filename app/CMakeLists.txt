@@ -20,7 +20,10 @@ set(VS_SOURCES
     src/VirtualMachineManager.hpp
     src/VirtualMachine.cpp
     src/VirtualMachine.hpp
+    src/Network.cpp
     src/Network.hpp
+    src/NetworkManager.cpp
+    src/NetworkManager.hpp
 )
 
 add_executable(virtual-slides ${VS_SOURCES})
