@@ -27,11 +27,13 @@ class Network : QObject
     Q_OBJECT
 public:
     Network(rapidxml::xml_node<char>* networkNode);
+
+    QString id() const { return m_id; }
 private:
     QString m_id;
     QString m_subnet = "10.0.64.0/24";
     QString m_vmId;
-    VirtualMachine* m_vm;
+    VirtualMachine* m_vm = nullptr;
     bool m_dhcpServerEnabled = true;
     bool m_Wan = true;
 

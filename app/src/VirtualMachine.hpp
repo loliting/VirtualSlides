@@ -62,11 +62,15 @@ class VirtualMachine : QObject
 {
     Q_OBJECT
 public:
-    VirtualMachine(rapidxml::xml_node<char>* vmNode);
+    VirtualMachine(Network* net, QString id, QString image, bool hasSlirpNetDev);
 private:
+    VirtualMachine(rapidxml::xml_node<char>* vmNode);
+    
     QString m_id;
     QString m_netId;
-    Network* m_net;
+    Network* m_net = nullptr;
+
+    bool m_hasSlirpNetDev = true;
 
     QString m_image;
 

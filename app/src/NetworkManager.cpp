@@ -2,8 +2,11 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QFile>
+#include <QtCore/QUuid>
 
 #include "third-party/RapidXml/rapidxml.hpp"
+
+#include "Presentation.hpp"
 
 using namespace rapidxml;
 
@@ -63,4 +66,24 @@ NetworkManager::NetworkManager(QString netsXmlPath){
     }
 
     netsXml.close();
+}
+
+void NetworkManager::setVirtualMachineManager(VirtualMachineManager* vmManager){
+    assert(m_vmManager == nullptr);
+    assert(vmManager);
+
+    for(auto net : m_networks){
+        if(net->m_vmId != nullptr){
+            net->m_vm = vmManager->getVirtualMachine(net->m_vmId);
+            if(net->m_vm == nullptr){
+                QString exceptionStr = "nets.xml: net \"" + net->m_id + "\": ";
+                exceptionStr += "Virtual machine \"" + net->m_vmId + "\" does not exist.";
+                throw PresentationException(exceptionStr);
+            }
+        }
+        else{
+            net->m_vmId = QUuid().toString();
+            net->m_vm = new VirtualMachine(net, net->m_vmId, "Router", true);
+        }
+    }
 }

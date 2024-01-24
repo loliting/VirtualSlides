@@ -39,8 +39,8 @@ public:
     PresentationElement();
     PresentationElement(qreal x, qreal y, qreal width, qreal height);
 
-    QWidget* widget() const { return m_widget; }
-    void setWidget(QWidget* w);
+    virtual QWidget* widget() const { return m_widget; }
+    virtual void setWidget(QWidget* w);
 
     virtual void setX(qreal x) { m_pos.setX(x); }
     virtual void setY(qreal y) { m_pos.setY(y); }
@@ -124,8 +124,8 @@ public:
     QList<PresentationSlide*> m_slides;
 private:
     QTemporaryDir m_tmpDir;
-    VirtualMachineManager* m_vmManager;
-    NetworkManager* m_netManager;
+    VirtualMachineManager* m_vmManager = nullptr;
+    NetworkManager* m_netManager = nullptr;
 };
 
 #endif // PRESENTATION_HPP

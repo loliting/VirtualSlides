@@ -5,16 +5,22 @@
 #include <QtCore/QString>
 #include <QtCore/QMap>
 
-#include "VirtualMachine.hpp"
+class VirtualMachineManager;
 
-class VirtualMachineManager : QObject
+#include "VirtualMachine.hpp"
+#include "NetworkManager.hpp"
+
+class VirtualMachineManager : public QObject
 {
     Q_OBJECT
 public:
     VirtualMachineManager(QString vmsXmlPath);
     ~VirtualMachineManager();
+    VirtualMachine* getVirtualMachine(QString id) const { return m_virtualMachines.value(id, nullptr); }
+    void setNetworkManager(NetworkManager* netManager);
 private:
     QMap<QString, VirtualMachine*> m_virtualMachines;
+    NetworkManager* m_netManager = nullptr;
 };
 
 #endif // VIRTUALMACHINEMANAGER_HPP

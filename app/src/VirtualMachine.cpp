@@ -212,3 +212,12 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     }
 
 }
+
+VirtualMachine::VirtualMachine(Network* net, QString id, QString image, bool hasSlirpNetDev){
+    m_net = net;
+    m_id = id;
+    m_netId = net->id();
+    m_id = image;
+    m_hasSlirpNetDev = hasSlirpNetDev;
+    m_hostname = id;
+}

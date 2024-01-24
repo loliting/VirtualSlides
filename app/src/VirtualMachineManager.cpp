@@ -21,7 +21,7 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
     
     xml_document<char> xmlDoc;
     try{
-        xmlDoc.parse<parse_trim_whitespace | parse_normalize_whitespace>(ba.data());
+        xmlDoc.parse<parse_normalize_whitespace>(ba.data());
     }
     catch(parse_error& e){
         qWarning() << "Failed to parse vms.xml: " + QString(e.what());
@@ -57,7 +57,7 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
             if(vm){
                 delete vm;
             }
-            qWarning() << "vms.xml:" << e.cause();
+            qWarning() << "vms.xml:" << e.cause() << "Ignoring vm.";
         }
 
         vmNode = vmNode->next_sibling(nullptr, 0UL, false);
@@ -69,5 +69,21 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
 VirtualMachineManager::~VirtualMachineManager(){
     for(auto vm : m_virtualMachines){
         delete vm;
+    }
+}
+
+void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
+    assert(m_netManager == nullptr);
+    assert(netManager);
+
+    m_netManager = netManager;
+    
+    for(auto vm : m_virtualMachines){
+        vm->m_net = netManager->getNetwork(vm->m_netId);
+        if(vm->m_net == nullptr && vm->m_netId != nullptr){
+            QString exceptionStr = "vms.xml: vm \"" + vm->m_id + "\": ";
+            exceptionStr += "Network \"" + vm->m_netId + "\" does not exist.";
+            throw PresentationException(exceptionStr);
+        }
     }
 }
