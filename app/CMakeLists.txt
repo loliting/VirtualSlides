@@ -24,6 +24,8 @@ set(VS_SOURCES
     src/Network.hpp
     src/NetworkManager.cpp
     src/NetworkManager.hpp
+    src/DiskImageManager.hpp
+    src/DiskImageManager.cpp
 )
 
 add_executable(virtual-slides ${VS_SOURCES})
