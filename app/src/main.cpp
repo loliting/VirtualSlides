@@ -5,9 +5,9 @@
 
 int main(int argc, char* argv[]) {
     Application* app = Application::Instance(argc, argv);
-
-    if(argc <= 1){
-        exit(0);
+    
+    if(app == nullptr || argc <= 1){
+        exit(1);
     }
     
     if(app->addWindow(argv[1]) == nullptr){

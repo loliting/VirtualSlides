@@ -1,8 +1,10 @@
+#include "Application.hpp"
+
 #include <cassert>
 
-#include "QtWidgets/QMessageBox"
+#include <QtWidgets/QMessageBox>
 
-#include "Application.hpp"
+#include "DiskImageManager.hpp"
 
 Application* Application::m_instance = nullptr;
 
@@ -14,10 +16,22 @@ Application* Application::Instance() {
 Application* Application::Instance(int &argc, char* argv[]) {
     assert(m_instance == nullptr);
     m_instance = new Application(argc, argv);
+    try{
+        DiskImageManager::Initializate();
+    }
+    catch(DiskImageManagerException &e){
+        QMessageBox msgBox(QMessageBox::Critical, "Virtual Slides", e.cause(), QMessageBox::Ok);
+        msgBox.exec();
+
+        delete m_instance;
+        m_instance = nullptr;
+        return nullptr;
+    }
     return m_instance;
 }
 
 void Application::CleanUp() {
+    DiskImageManager::CleanUp();
     delete m_instance;
     m_instance = nullptr;
 }
