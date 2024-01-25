@@ -2,6 +2,9 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QTemporaryFile>
+
+#include "Application.hpp"
 
 using namespace rapidxml;
 
@@ -153,6 +156,7 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     if(imageNode == nullptr){
         throw VirtualMachineException("Virtual machine \"" + m_id + "\" does not specify image.");
     }
+    m_image = imageNode->value();
 
     xml_node<char>* initNode = vmNode->first_node("init", 0UL, false);
     if(initNode != nullptr){
@@ -210,14 +214,14 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
             objectiveNode = objectiveNode->next_sibling(nullptr, 0UL, false);
         }
     }
-
 }
 
-VirtualMachine::VirtualMachine(Network* net, QString id, QString image, bool hasSlirpNetDev){
-    m_net = net;
+VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
     m_id = id;
+    m_net = net;
     m_netId = net->id();
-    m_id = image;
     m_hasSlirpNetDev = hasSlirpNetDev;
-    m_hostname = id;
+    m_dhcpServer = dhcpServer;
+    m_image = image;
+    
 }

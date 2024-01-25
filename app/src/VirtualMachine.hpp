@@ -4,6 +4,9 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QList>
+#include <QtCore/QTemporaryFile>
+
+#include <qtermwidget5/qtermwidget.h>
 
 #include <exception>
 
@@ -61,11 +64,10 @@ struct CommandObjective
 class VirtualMachine : QObject
 {
     Q_OBJECT
-public:
-    VirtualMachine(Network* net, QString id, QString image, bool hasSlirpNetDev);
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
-    
+    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
+
     QString m_id;
     QString m_netId;
     Network* m_net = nullptr;
@@ -76,6 +78,7 @@ private:
 
     QString m_hostname;
     bool m_dhcpClient = true;
+    bool m_dhcpServer = false;
     QList<InstallFile> m_installFiles;
 
     QList<FileObjective> m_fileObjectives;

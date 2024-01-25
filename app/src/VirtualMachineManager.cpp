@@ -80,10 +80,30 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
     
     for(auto vm : m_virtualMachines){
         vm->m_net = netManager->getNetwork(vm->m_netId);
-        if(vm->m_net == nullptr && vm->m_netId != nullptr){
+        if(vm->m_net){
+            if(vm->m_net->vm() == vm){
+                if(vm->m_net->wan() == true){
+                    vm->m_hasSlirpNetDev = true;
+                }
+                if(vm->m_net->dhcpServerEnabled() == true){
+                    vm->m_dhcpServer = true;
+                }
+            }
+        }
+        else if(vm->m_netId != nullptr){
             QString exceptionStr = "vms.xml: vm \"" + vm->m_id + "\": ";
             exceptionStr += "Network \"" + vm->m_netId + "\" does not exist.";
             throw PresentationException(exceptionStr);
         }
     }
+}
+
+VirtualMachine* VirtualMachineManager::addVm(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
+    assert(m_virtualMachines.contains(id) == false);
+
+    VirtualMachine* vm = new VirtualMachine(id, net, hasSlirpNetDev, dhcpServer, image);
+
+    m_virtualMachines[vm->m_id] = vm;
+    
+    return vm;
 }

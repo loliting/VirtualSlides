@@ -71,6 +71,7 @@ NetworkManager::NetworkManager(QString netsXmlPath){
 void NetworkManager::setVirtualMachineManager(VirtualMachineManager* vmManager){
     assert(m_vmManager == nullptr);
     assert(vmManager);
+    m_vmManager = vmManager;
 
     for(auto net : m_networks){
         if(net->m_vmId != nullptr){
@@ -82,8 +83,8 @@ void NetworkManager::setVirtualMachineManager(VirtualMachineManager* vmManager){
             }
         }
         else{
-            net->m_vmId = QUuid().toString();
-            net->m_vm = new VirtualMachine(net, net->m_vmId, "Router", true);
+            net->m_vmId = QUuid::createUuid().toString();
+            net->m_vm = vmManager->addVm(net->m_vmId, net, net->m_Wan, net->m_dhcpServerEnabled, "Router");
         }
     }
 }

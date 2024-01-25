@@ -29,6 +29,10 @@ public:
     Network(rapidxml::xml_node<char>* networkNode);
 
     QString id() const { return m_id; }
+    VirtualMachine* vm() const { return m_vm; }
+    bool wan() const { return m_Wan; }
+    bool dhcpServerEnabled() const { return m_dhcpServerEnabled; }
+    QString subnet() const { return m_subnet; }
 private:
     QString m_id;
     QString m_subnet = "10.0.64.0/24";
