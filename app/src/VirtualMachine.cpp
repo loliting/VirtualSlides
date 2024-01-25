@@ -5,8 +5,13 @@
 #include <QtCore/QTemporaryFile>
 
 #include "Application.hpp"
+#include "DiskImageManager.hpp"
 
 using namespace rapidxml;
+
+#define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw init=/sbin/vs_init selinux=0"
+#define KERNEL_QUIET_CMD KERNEL_DEFAULT_CMD " quiet"
+#define KERNEL_EARLYPRINTK_CMD KERNEL_DEFAULT_CMD " earlyprintk=ttyS0"
 
 static bool getXmlBoolAttrib(xml_node<char>* node, const char* name, bool defaultValue){
     if(node == nullptr){
@@ -214,6 +219,9 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
             objectiveNode = objectiveNode->next_sibling(nullptr, 0UL, false);
         }
     }
+
+    createImageFile();
+    createWidget();
 }
 
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
@@ -223,5 +231,63 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
     m_hasSlirpNetDev = hasSlirpNetDev;
     m_dhcpServer = dhcpServer;
     m_image = image;
-    
+
+    createImageFile();
+    createWidget();
+}
+
+void VirtualMachine::createImageFile(){
+    DiskImage* diskImage = DiskImageManager::getDiskImage(m_image);
+    if(diskImage == nullptr){
+        throw VirtualMachineException("Could not create vm \"" + m_id + "\": image \"" + m_image + "\" does not exist");
+    }
+
+    if(m_imageFile.open() == false){
+        throw VirtualMachineException("Could not create temporary file: " + m_imageFile.errorString());
+    }
+    QFile orginalDiskFile(diskImage->path);
+    if(orginalDiskFile.open(QIODevice::ReadOnly) == false){
+        QString exceptionStr = "Could not open disk image \"" + diskImage->path + "\": ";
+        exceptionStr += orginalDiskFile.errorString();
+        throw VirtualMachineException(exceptionStr);
+    }
+    m_imageFile.write(orginalDiskFile.readAll());
+    orginalDiskFile.close();
+}
+
+void VirtualMachine::createWidget(){
+    assert(m_imageFile.fileName() != nullptr);
+
+    m_widget = new QTermWidget(0, nullptr);
+    m_widget->setArgs(getArgs());
+    m_widget->setShellProgram("qemu-system-x86_64");
+    m_widget->setAutoClose(false);
+}
+
+QStringList VirtualMachine::getArgs(){
+    QStringList ret;
+    ret << "-M" << "microvm"
+        // FIXME: add -enable-kvm flag on kvm enabled hosts, change cpu type to host
+        << "-cpu" << "max"
+        << "-m" << "128m"
+        << "-no-acpi" << "-no-reboot"
+        /* 
+         * FIXME: Implement some sort of kernel manager,
+         * so we can track where the kernel actually is, instead of hardcoding
+         * path, track kernel versions and store multiple releases
+         */
+        << "-kernel" << Application::applicationDirPath() + "/bzImage"
+        << "-append" << KERNEL_DEFAULT_CMD
+        << "-nodefaults" << "-no-user-config" << "-nographic"
+        << "-serial" << "mon:stdio"
+        << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
+        << "-device" << "virtio-blk-device,drive=root";
+        if(m_hasSlirpNetDev){
+            ret << "-netdev" << "user,id=net0,net=100.127.254.0/24,dhcpstart=100.127.254.8"
+                << "-device" << "virtio-net-device,netdev=net0";
+        }
+        ret << "-netdev" << "socket,id=net1,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
+        << "-device" << "virtio-net-device,netdev=net1,mac=42:69:00:00:00:01";
+
+    return ret;
 }

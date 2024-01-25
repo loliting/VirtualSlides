@@ -64,15 +64,21 @@ struct CommandObjective
 class VirtualMachine : QObject
 {
     Q_OBJECT
+public:
+    QTermWidget* widget() const { return m_widget; }
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
     VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
+
+    void createWidget();
+    void createImageFile();
+    QStringList getArgs();
 
     QString m_id;
     QString m_netId;
     Network* m_net = nullptr;
 
-    bool m_hasSlirpNetDev = true;
+    bool m_hasSlirpNetDev = false;
 
     QString m_image;
 
@@ -83,6 +89,9 @@ private:
 
     QList<FileObjective> m_fileObjectives;
     QList<CommandObjective> m_commandObjectives;
+
+    QTermWidget* m_widget = nullptr;
+    QTemporaryFile m_imageFile;
 
     friend class VirtualMachineManager;
 };
