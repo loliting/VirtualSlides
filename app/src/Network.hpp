@@ -28,6 +28,8 @@ class Network : QObject
 public:
     Network(rapidxml::xml_node<char>* networkNode);
 
+    QString generateNewMacAddress();
+
     QString id() const { return m_id; }
     VirtualMachine* vm() const { return m_vm; }
     bool wan() const { return m_Wan; }
@@ -40,6 +42,8 @@ private:
     VirtualMachine* m_vm = nullptr;
     bool m_dhcpServerEnabled = true;
     bool m_Wan = true;
+
+    quint32 macAddressesCount = 1;
 
     friend class NetworkManager;
 };

@@ -77,6 +77,7 @@ private:
     QString m_id;
     QString m_netId;
     Network* m_net = nullptr;
+    QString m_macAddress;
 
     bool m_hasSlirpNetDev = false;
 

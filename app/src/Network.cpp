@@ -62,3 +62,10 @@ Network::Network(rapidxml::xml_node<char>* networkNode){
     m_dhcpServerEnabled = getXmlBoolValue(networkNode, "dhcp-server", true);
     m_Wan = getXmlBoolValue(networkNode, "WAN", true);
 }
+
+QString Network::generateNewMacAddress() {
+    assert(macAddressesCount <= 0xFF);
+    return QString::number(0x1a, 16) + ":" + QString::number(0x2b, 16) + ":"
+         + QString::number(0x3c, 16) + ":" + QString::number(0x4d, 16) + ":"
+         + QString::number(0x5e, 16) + ":" + QString::number(macAddressesCount++, 16);
+}

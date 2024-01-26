@@ -89,6 +89,8 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
                     vm->m_dhcpServer = true;
                 }
             }
+            vm->m_macAddress = vm->m_net->generateNewMacAddress();
+            vm->m_widget->setArgs(vm->getArgs());
         }
         else if(vm->m_netId != nullptr){
             QString exceptionStr = "vms.xml: vm \"" + vm->m_id + "\": ";
