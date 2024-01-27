@@ -13,6 +13,18 @@ using namespace rapidxml;
 #define KERNEL_QUIET_CMD KERNEL_DEFAULT_CMD " quiet"
 #define KERNEL_EARLYPRINTK_CMD KERNEL_DEFAULT_CMD " earlyprintk=ttyS0"
 
+static bool getBool(QString boolStr, bool defaultValue){
+    QString lowerBoolStr = boolStr.toLower();
+
+    if(lowerBoolStr == "true"){
+        return true;
+    }
+    else if(lowerBoolStr == "false"){
+        return false;
+    }
+    return defaultValue;
+}
+
 static bool getXmlBoolAttrib(xml_node<char>* node, const char* name, bool defaultValue){
     if(node == nullptr){
         return defaultValue;
@@ -23,15 +35,7 @@ static bool getXmlBoolAttrib(xml_node<char>* node, const char* name, bool defaul
         return defaultValue;
     }
 
-    if(QString(attrib->value()).toLower() == "true"){
-        return true;
-    }
-    else if(QString(attrib->value()).toLower() == "false"){
-        return false;
-    }
-    else{
-        return defaultValue;
-    }
+    return getBool(attrib->value(), defaultValue);
 }
 
 static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool defaultValue){
@@ -44,15 +48,7 @@ static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool d
         return defaultValue;
     }
 
-    if(QString(node->value()).toLower() == "true"){
-        return true;
-    }
-    else if(QString(node->value()).toLower() == "false"){
-        return false;
-    }
-    else{
-        return defaultValue;
-    }
+    return getBool(node->value(), defaultValue);
 }
 
 InstallFile::InstallFile(xml_node<char>* installFileNode){
@@ -266,11 +262,11 @@ void VirtualMachine::createWidget(){
 
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
-    ret << "-M" << "microvm"
+    ret << "-machine" << "microvm,acpi=off"
         // FIXME: add -enable-kvm flag on kvm enabled hosts, change cpu type to host
         << "-cpu" << "max"
-        << "-m" << "128m"
-        << "-no-acpi" << "-no-reboot"
+        << "-m" << "128M" << "-mem-prealloc"
+        << "-no-reboot"
         /* 
          * FIXME: Implement some sort of kernel manager,
          * so we can track where the kernel actually is, instead of hardcoding
@@ -282,14 +278,14 @@ QStringList VirtualMachine::getArgs(){
         << "-serial" << "mon:stdio"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root";
-        if(m_hasSlirpNetDev){
-            ret << "-netdev" << "user,id=net0,net=100.127.254.0/24,dhcpstart=100.127.254.8"
-                << "-device" << "virtio-net-device,netdev=net0";
-        }
-        if(!m_macAddress.isEmpty() && m_net){
-            ret << "-netdev" << "socket,id=net1,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
-            << "-device" << "virtio-net-device,netdev=net1,mac=" + m_net->generateNewMacAddress();
-        }
+    if(m_hasSlirpNetDev){
+        ret << "-netdev" << "user,id=net0,net=100.127.254.0/24,dhcpstart=100.127.254.8"
+            << "-device" << "virtio-net-device,netdev=net0";
+    }
+    if(!m_macAddress.isEmpty() && m_net){
+        ret << "-netdev" << "socket,id=net1,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
+        << "-device" << "virtio-net-device,netdev=net1,mac=" + m_net->generateNewMacAddress();
+    }
 
     return ret;
 }
