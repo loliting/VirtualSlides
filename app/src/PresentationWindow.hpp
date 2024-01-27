@@ -14,7 +14,7 @@ public:
     ~PresentationWindow();
 
 private:
-    Presentation* m_presentation;
+    Presentation* m_presentation = nullptr;
 
     quint64 m_currentSlideIndex = 0;
     QAction* m_nextSlideAction = new QAction();
