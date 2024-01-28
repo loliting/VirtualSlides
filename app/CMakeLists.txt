@@ -26,9 +26,13 @@ set(VS_SOURCES
     src/NetworkManager.hpp
     src/DiskImageManager.hpp
     src/DiskImageManager.cpp
+    src/VirtualMachineWidget.cpp
+    src/VirtualMachineWidget.hpp
 )
 
-add_executable(virtual-slides ${VS_SOURCES})
+qt5_add_resources(VS_SOURCES Resources/res.qrc)
+
+add_executable(virtual-slides ${VS_SOURCES} Resources/res.qrc)
 
 target_link_libraries(virtual-slides PRIVATE
     Qt5::Core

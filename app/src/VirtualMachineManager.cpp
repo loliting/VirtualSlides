@@ -85,7 +85,6 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
                 vm->m_hasSlirpNetDev = net->hasWan();
                 vm->m_dhcpServer = net->hasDhcpServerEnabled();
             }
-            vm->m_macAddress = vm->m_net->generateNewMacAddress();
             vm->setNet(net);
         }
         else if(vm->m_netId != nullptr){

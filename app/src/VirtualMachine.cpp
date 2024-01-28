@@ -217,6 +217,7 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     }
 
     createImageFile();
+    createWidget();
 }
 
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
@@ -226,8 +227,10 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
     m_hasSlirpNetDev = hasSlirpNetDev;
     m_dhcpServer = dhcpServer;
     m_image = image;
+    m_macAddress = m_net->generateNewMacAddress();
 
     createImageFile();
+    createWidget();
 }
 
 void VirtualMachine::createImageFile(){
@@ -239,6 +242,7 @@ void VirtualMachine::createImageFile(){
     if(m_imageFile.open() == false){
         throw VirtualMachineException("Could not create temporary file: " + m_imageFile.errorString());
     }
+    m_imageFile.setAutoRemove(false);
     QFile orginalDiskFile(diskImage->path);
     if(orginalDiskFile.open(QIODevice::ReadOnly) == false){
         QString exceptionStr = "Could not open disk image \"" + diskImage->path + "\": ";
@@ -247,13 +251,19 @@ void VirtualMachine::createImageFile(){
     }
     m_imageFile.write(orginalDiskFile.readAll());
     orginalDiskFile.close();
+    m_imageFile.close();
+}
+
+void VirtualMachine::createWidget(){
+    assert(m_imageFile.fileName() != nullptr);
+    m_widget = new VirtualMachineWidget(this);
+    m_widget->show();
 }
 
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
     ret << "-machine" << "microvm,acpi=off"
         // FIXME: add -enable-kvm flag on kvm enabled hosts, change cpu type to host
-        << "-cpu" << "max"
         << "-m" << "128M" << "-mem-prealloc"
         << "-no-reboot"
         /* 
@@ -269,12 +279,20 @@ QStringList VirtualMachine::getArgs(){
         << "-device" << "virtio-blk-device,drive=root";
     if(m_hasSlirpNetDev){
         ret << "-netdev" << "user,id=net0,net=100.127.254.0/24,dhcpstart=100.127.254.8"
-            << "-device" << "virtio-net-device,netdev=net0";
+            << "-device" << "virtio-net-device,netdev=net0,mac=00:00:00:00:00:01";
     }
     if(!m_macAddress.isEmpty() && m_net){
         ret << "-netdev" << "socket,id=net1,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
-        << "-device" << "virtio-net-device,netdev=net1,mac=" + m_net->generateNewMacAddress();
+            << "-device" << "virtio-net-device,netdev=net1,mac=" + m_macAddress;
     }
-
+    
     return ret;
+}
+
+void VirtualMachine::setNet(Network* net){
+    m_net = net;
+    if(net){
+        m_macAddress = net->generateNewMacAddress();
+    }
+    emit networkChanged();
 }

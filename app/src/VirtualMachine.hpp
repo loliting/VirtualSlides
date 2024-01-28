@@ -13,6 +13,7 @@
 class VirtualMachine;
 
 #include "Network.hpp"
+#include "VirtualMachineWidget.hpp"
 
 class VirtualMachineException : public std::exception
 {
@@ -64,14 +65,18 @@ class VirtualMachine : public QObject
     Q_OBJECT
     Q_PROPERTY(Network* net READ net WRITE setNet NOTIFY networkChanged);
 public:
+    QString id() const { return m_id; }
+
+    VirtualMachineWidget* widget() const { return m_widget; }
     Network* net() const { return m_net; }
-    void setNet(Network* net) { m_net = net; }
+    void setNet(Network* net);
+    QStringList getArgs();
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
     VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
 
+    void createWidget();
     void createImageFile();
-    QStringList getArgs();
 
     QString m_id;
     QString m_netId;
@@ -90,9 +95,10 @@ private:
     QList<FileObjective> m_fileObjectives;
     QList<CommandObjective> m_commandObjectives;
 
+    VirtualMachineWidget* m_widget = nullptr;
     QTemporaryFile m_imageFile;
 signals:
-    void networkChanged(Network* newNet);
+    void networkChanged();
 
     friend class VirtualMachineManager;
 };

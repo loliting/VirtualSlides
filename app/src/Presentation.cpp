@@ -339,8 +339,8 @@ Presentation::Presentation(QString path) {
         parseXml();
         m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"));
         m_netManager = new NetworkManager(getFilePath("nets.xml"));
-        m_vmManager->setNetworkManager(m_netManager);
         m_netManager->setVirtualMachineManager(m_vmManager);
+        m_vmManager->setNetworkManager(m_netManager);
         
     }
     catch(PresentationException &e){
