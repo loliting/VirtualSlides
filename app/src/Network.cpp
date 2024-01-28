@@ -65,7 +65,14 @@ Network::Network(rapidxml::xml_node<char>* networkNode){
 
 QString Network::generateNewMacAddress() {
     assert(macAddressesCount <= 0xFF);
+
+    QString lastByte = QString::number(macAddressesCount++, 16);
+    // normalize last byte to always take 2 characters
+    if(lastByte.length() == 1){
+        lastByte = "0" + lastByte;
+    }
+
     return QString::number(0x1a, 16) + ":" + QString::number(0x2b, 16) + ":"
          + QString::number(0x3c, 16) + ":" + QString::number(0x4d, 16) + ":"
-         + QString::number(0x5e, 16) + ":" + QString::number(macAddressesCount++, 16);
+         + QString::number(0x5e, 16) + ":" + lastByte;
 }
