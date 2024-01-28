@@ -280,16 +280,21 @@ void Presentation::parseXml() {
             nodeStr = nodeStr.toLower();
             if(nodeStr == QString("TextBox").toLower()){
                 textNode = tmpNode->first_node("Text", 0UL, false);
-                std::stringstream textNodeSs;
-                textNodeSs << *textNode;
-                std::string text = textNodeSs.str();
-                text = text.substr(TEXT_NODE_SZ, text.length() - TEXT_NODE_SZ * 2);
+                if(textNode){
+                    std::stringstream textNodeSs;
+                    textNodeSs << *textNode;
+                    std::string text = textNodeSs.str();
+                    text = text.substr(TEXT_NODE_SZ, text.length() - TEXT_NODE_SZ * 2);
 
-                PresentationTextBoxElement* tB = nullptr;
-                tB = new PresentationTextBoxElement(slide, QString::fromStdString(text));
-                parseXmlDimensions(tmpNode, tB);
+                    PresentationTextBoxElement* tB = nullptr;
+                    tB = new PresentationTextBoxElement(slide, QString::fromStdString(text));
+                    parseXmlDimensions(tmpNode, tB);
 
-                slide->m_elements.append(tB);
+                    slide->m_elements.append(tB);
+                }
+                else{
+                    qWarning() << "TextBox node does not contain \"Text\" subnode.";
+                }
             }
             else if(nodeStr == QString("Image").toLower()){
                 PresentationImageElement* imageElement = nullptr;
