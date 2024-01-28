@@ -6,8 +6,6 @@
 #include <QtCore/QList>
 #include <QtCore/QTemporaryFile>
 
-#include <qtermwidget5/qtermwidget.h>
-
 #include <exception>
 
 #include "third-party/RapidXml/rapidxml.hpp"
@@ -61,16 +59,17 @@ struct CommandObjective
     QStringList fileArgs;
 };
 
-class VirtualMachine : QObject
+class VirtualMachine : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(Network* net READ net WRITE setNet NOTIFY networkChanged);
 public:
-    QTermWidget* widget() const { return m_widget; }
+    Network* net() const { return m_net; }
+    void setNet(Network* net) { m_net = net; }
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
     VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
 
-    void createWidget();
     void createImageFile();
     QStringList getArgs();
 
@@ -91,8 +90,9 @@ private:
     QList<FileObjective> m_fileObjectives;
     QList<CommandObjective> m_commandObjectives;
 
-    QTermWidget* m_widget = nullptr;
     QTemporaryFile m_imageFile;
+signals:
+    void networkChanged(Network* newNet);
 
     friend class VirtualMachineManager;
 };

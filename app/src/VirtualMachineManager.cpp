@@ -79,18 +79,14 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
     m_netManager = netManager;
     
     for(auto vm : m_virtualMachines){
-        vm->m_net = netManager->getNetwork(vm->m_netId);
-        if(vm->m_net){
-            if(vm->m_net->vm() == vm){
-                if(vm->m_net->wan() == true){
-                    vm->m_hasSlirpNetDev = true;
-                }
-                if(vm->m_net->dhcpServerEnabled() == true){
-                    vm->m_dhcpServer = true;
-                }
+        Network* net = netManager->getNetwork(vm->m_netId);
+        if(net){
+            if(net->vm() == vm){
+                vm->m_hasSlirpNetDev = net->hasWan();
+                vm->m_dhcpServer = net->hasDhcpServerEnabled();
             }
             vm->m_macAddress = vm->m_net->generateNewMacAddress();
-            vm->m_widget->setArgs(vm->getArgs());
+            vm->setNet(net);
         }
         else if(vm->m_netId != nullptr){
             QString exceptionStr = "vms.xml: vm \"" + vm->m_id + "\": ";

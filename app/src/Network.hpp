@@ -32,8 +32,8 @@ public:
 
     QString id() const { return m_id; }
     VirtualMachine* vm() const { return m_vm; }
-    bool wan() const { return m_Wan; }
-    bool dhcpServerEnabled() const { return m_dhcpServerEnabled; }
+    bool hasWan() const { return m_Wan; }
+    bool hasDhcpServerEnabled() const { return m_dhcpServerEnabled; }
     QString subnet() const { return m_subnet; }
 private:
     QString m_id;

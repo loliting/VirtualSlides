@@ -217,7 +217,6 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     }
 
     createImageFile();
-    createWidget();
 }
 
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
@@ -229,7 +228,6 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
     m_image = image;
 
     createImageFile();
-    createWidget();
 }
 
 void VirtualMachine::createImageFile(){
@@ -249,15 +247,6 @@ void VirtualMachine::createImageFile(){
     }
     m_imageFile.write(orginalDiskFile.readAll());
     orginalDiskFile.close();
-}
-
-void VirtualMachine::createWidget(){
-    assert(m_imageFile.fileName() != nullptr);
-
-    m_widget = new QTermWidget(0, nullptr);
-    m_widget->setArgs(getArgs());
-    m_widget->setShellProgram("qemu-system-x86_64");
-    m_widget->setAutoClose(false);
 }
 
 QStringList VirtualMachine::getArgs(){
