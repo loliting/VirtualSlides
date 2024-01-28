@@ -22,7 +22,7 @@ private:
     std::string m_what;
 };
 
-class Network : QObject
+class Network : public QObject
 {
     Q_OBJECT
 public:
