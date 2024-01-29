@@ -1,6 +1,6 @@
 #include "VirtualMachineWidget.hpp"
 
-#include <QtCore/QDebug>
+#include <csignal>
 
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     : QWidget()
@@ -11,7 +11,6 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     networkChanged();
 
     m_terminal->setColorScheme("WhiteOnBlack");
-    m_terminal->setAutoClose(false);
     
     connect(m_startButton, SIGNAL(clicked(bool)),
         this, SLOT(startVm(void)));
@@ -49,10 +48,21 @@ void VirtualMachineWidget::startVm(){
 }
 
 void VirtualMachineWidget::stopVm(){
-    assert(0);
+    int pid = m_terminal->getShellPID();
+    if(pid <= 0){
+        return;
+    }
+    kill(pid, SIGKILL);
+    delete m_terminal;
+    m_terminal = new QTermWidget(0, this);
+    m_terminal->setColorScheme("WhiteOnBlack");
+    m_layout->addWidget(m_terminal, 1, 0, 1, 5);
 }
 
 void VirtualMachineWidget::restartVm(){
+    if(m_terminal->getShellPID() <= 0){
+        return;
+    }
     stopVm();
     startVm();
 }
