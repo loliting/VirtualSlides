@@ -20,6 +20,8 @@ public:
     VirtualMachineWidget(VirtualMachine* vm);
     ~VirtualMachineWidget();
 private:
+    bool m_isRunning = false;
+
     VirtualMachine* m_vm = nullptr;
 
     QLabel* m_title = new QLabel(this);
@@ -32,7 +34,7 @@ private:
 
     QStringList m_args;
 private slots:
-    void networkChanged();
+    void handleNetworkChanged();
 public slots:
     void startVm();
     void stopVm();

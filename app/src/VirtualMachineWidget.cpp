@@ -1,14 +1,12 @@
 #include "VirtualMachineWidget.hpp"
 
-#include <csignal>
-
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     : QWidget()
 {
     assert(vm);
 
     m_vm = vm;
-    networkChanged();
+    handleNetworkChanged();
 
     m_terminal->setColorScheme("WhiteOnBlack");
     
@@ -19,7 +17,9 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     connect(m_restartButton, SIGNAL(clicked(bool)),
         this, SLOT(restartVm(void)));
     connect(m_vm, SIGNAL(networkChanged(void)),
-        this, SLOT(networkChanged(void)));
+        this, SLOT(handleNetworkChanged(void)));
+    connect(m_terminal, SIGNAL(finished(void)),
+        this, SLOT(stopVm(void)));
 
     setLayout(m_layout);
     m_layout->addWidget(m_title, 0, 0);
@@ -28,6 +28,8 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     m_layout->addWidget(m_restartButton, 0, 3);
     m_layout->addWidget(m_stopButton, 0, 4);
     m_layout->addWidget(m_terminal, 1, 0, 1, 5);
+    m_stopButton->setEnabled(false);
+    m_restartButton->setEnabled(false);
 }
 
 VirtualMachineWidget::~VirtualMachineWidget(){
@@ -45,29 +47,37 @@ void VirtualMachineWidget::startVm(){
     m_terminal->setShellProgram("qemu-system-x86_64");
     m_terminal->setArgs(m_args);
     m_terminal->startShellProgram();
+    m_stopButton->setEnabled(true);
+    m_restartButton->setEnabled(true);
+    m_startButton->setEnabled(false);
+    m_isRunning = true;
 }
 
+
+
 void VirtualMachineWidget::stopVm(){
-    int pid = m_terminal->getShellPID();
-    if(pid <= 0){
-        return;
-    }
-    kill(pid, SIGKILL);
+    disconnect(m_terminal, SIGNAL(finished(void)), 0, 0);
     delete m_terminal;
+
+    m_isRunning = false;
     m_terminal = new QTermWidget(0, this);
     m_terminal->setColorScheme("WhiteOnBlack");
     m_layout->addWidget(m_terminal, 1, 0, 1, 5);
+
+    m_stopButton->setEnabled(false);
+    m_restartButton->setEnabled(false);
+    m_startButton->setEnabled(true);
+
+    connect(m_terminal, SIGNAL(finished(void)),
+        this, SLOT(stopVm(void)));
 }
 
 void VirtualMachineWidget::restartVm(){
-    if(m_terminal->getShellPID() <= 0){
-        return;
-    }
     stopVm();
     startVm();
 }
 
-void VirtualMachineWidget::networkChanged(){
+void VirtualMachineWidget::handleNetworkChanged() {
     m_args = m_vm->getArgs();
     if(m_vm->net()){
         m_title->setText(m_vm->net()->id() + ": " + m_vm->id());
