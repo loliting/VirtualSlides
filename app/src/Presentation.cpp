@@ -18,30 +18,35 @@
 using namespace rapidxml;
 
 static void parseXmlDimensions(xml_node<char>* xmlNode, PresentationElement* e) {
-    qreal x = 0, y = 0, w = 0, h = 0;
-    
-    xml_attribute<char>* attrib = nullptr;
-    
-    attrib = xmlNode->first_attribute("x", 0UL, false);
-    if(attrib != nullptr){
-        x = QString(attrib->value()).toDouble() / 100;
-    }
-    attrib = xmlNode->first_attribute("y", 0UL, false);
-    if(attrib != nullptr){
-        y = QString(attrib->value()).toDouble() / 100;
-    }
-    attrib = xmlNode->first_attribute("width", 0UL, false);
-    if(attrib != nullptr){
-        w = QString(attrib->value()).toDouble() / 100;
-    }
-    attrib = xmlNode->first_attribute("height", 0UL, false);
-    if(attrib != nullptr){
-        h = QString(attrib->value()).toDouble() / 100;
-    }
-    e->setX(x);
-    e->setY(y);
-    e->setWidth(w);
-    e->setHeight(h);
+    auto getDim = [=](QByteArray dimName) -> qreal {
+        xml_attribute<char>* attrib = nullptr;
+        QString dimStr = nullptr;
+        if((attrib = xmlNode->first_attribute(dimName, 0UL, false)) != nullptr)
+            dimStr = QString(attrib->value());
+        else if((attrib = xmlNode->first_attribute(dimName, 1UL, false)) != nullptr)
+            dimStr = QString(attrib->value());            
+        else{
+            qWarning() << xmlNode->name() << "does not contain" << dimName << "attribute.";
+            return 0.0f;
+        }
+        if(dimStr.isEmpty()){
+            qWarning() << xmlNode->name() << "contains" << dimName << "attribute, but it's empty";
+            return 0.0f;
+        }
+
+        bool ok;
+        qreal dim = dimStr.toDouble(&ok) / 100;
+        if(!ok){
+            qWarning() << "Failed to convert" << dimStr << "to double type";
+            return 0.0f;
+        }
+        return dim;
+    };
+
+    e->setX(getDim("x"));
+    e->setY(getDim("y"));
+    e->setWidth(getDim("width"));
+    e->setHeight(getDim("height"));
 }
 
 void PresentationElement::recalculateRealDim() {
@@ -336,11 +341,11 @@ Presentation::Presentation(QString path) {
 
     try{
         decompressVslidesArchive(path);
-        parseXml();
         m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"));
         m_netManager = new NetworkManager(getFilePath("nets.xml"));
         m_netManager->setVirtualMachineManager(m_vmManager);
         m_vmManager->setNetworkManager(m_netManager);
+        parseXml();
         
     }
     catch(PresentationException &e){
