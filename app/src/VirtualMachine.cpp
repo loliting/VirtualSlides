@@ -257,7 +257,6 @@ void VirtualMachine::createImageFile(){
 void VirtualMachine::createWidget(){
     assert(m_imageFile.fileName() != nullptr);
     m_widget = new VirtualMachineWidget(this);
-    m_widget->show();
 }
 
 QStringList VirtualMachine::getArgs(){

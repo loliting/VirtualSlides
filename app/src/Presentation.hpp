@@ -91,6 +91,16 @@ private:
     QLabel* m_widget;
 };
 
+class PresentationVmElement : public PresentationElement
+{
+    Q_OBJECT
+public:
+    PresentationVmElement(QWidget* parent, VirtualMachineWidget* widget);
+    PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachineWidget* widget);
+private:
+    VirtualMachineWidget* m_widget;
+};
+
 class PresentationSlide : public QLabel 
 {
     Q_OBJECT
@@ -118,7 +128,7 @@ public:
     QString getFilePath(QString path);
 private:
     void decompressVslidesArchive(QString path);
-    void parseXml();
+    void parseRootXml();
 public:
     QString m_title;
     QList<PresentationSlide*> m_slides;

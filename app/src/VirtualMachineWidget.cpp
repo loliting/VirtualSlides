@@ -34,13 +34,12 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
 
 VirtualMachineWidget::~VirtualMachineWidget(){
     m_terminal->close();
-    delete m_layout;
-    delete m_startButton;
-    delete m_stopButton;
-    delete m_restartButton;
-    delete m_title;
-    delete m_titleSpacer;
-    delete m_terminal;
+    m_layout->deleteLater();
+    m_startButton->deleteLater();
+    m_stopButton->deleteLater();
+    m_restartButton->deleteLater();
+    m_title->deleteLater();
+    m_terminal->deleteLater();
 }
 
 void VirtualMachineWidget::startVm(){
@@ -52,8 +51,6 @@ void VirtualMachineWidget::startVm(){
     m_startButton->setEnabled(false);
     m_isRunning = true;
 }
-
-
 
 void VirtualMachineWidget::stopVm(){
     disconnect(m_terminal, SIGNAL(finished(void)), 0, 0);
@@ -79,6 +76,7 @@ void VirtualMachineWidget::restartVm(){
 
 void VirtualMachineWidget::handleNetworkChanged() {
     m_args = m_vm->getArgs();
+
     if(m_vm->net()){
         m_title->setText(m_vm->net()->id() + ": " + m_vm->id());
     }

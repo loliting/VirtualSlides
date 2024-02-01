@@ -131,6 +131,21 @@ PresentationImageElement::~PresentationImageElement() {
     delete m_widget;
 }
 
+PresentationVmElement::PresentationVmElement(QWidget* parent, VirtualMachineWidget* widget)
+    : PresentationElement()
+{
+    m_widget = widget;
+    m_widget->setParent(parent);
+    setWidget(m_widget);
+    m_widget->show();
+}
+
+PresentationVmElement::PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachineWidget* widget)
+    : PresentationElement(x, y, width, height)
+{
+    PresentationVmElement(parent, widget);
+}
+
 PresentationSlide::PresentationSlide(QColor bg) {
     setAutoFillBackground(true);
     setPalette(QPalette(bg));
@@ -216,7 +231,7 @@ void Presentation::decompressVslidesArchive(QString path) {
     zip_close(zipArchive);
 }
 
-void Presentation::parseXml() {
+void Presentation::parseRootXml() {
     QFile rootXml(getFilePath("root.xml"));
 
     if(rootXml.open(QIODevice::ReadOnly) == false){
@@ -254,6 +269,7 @@ void Presentation::parseXml() {
     xml_node<char>* textNode;
 
     xml_attribute<char>* srcAttribute;
+    xml_attribute<char>* vmIdAttribute;
 
     if(slideNode == nullptr){
         QString exceptionStr = "Failed to parse root.xml: ";
@@ -319,6 +335,22 @@ void Presentation::parseXml() {
 
                 slide->m_elements.append(imageElement);
             }
+            else if(nodeStr == QString("vm").toLower()){
+                vmIdAttribute = tmpNode->first_attribute("id", 0UL, false);
+                QString vmId = vmIdAttribute ? vmIdAttribute->value() : nullptr; 
+                VirtualMachine* vm = m_vmManager->getVirtualMachine(vmId);
+                PresentationVmElement* vmElement = nullptr;
+                if(vm){
+                    vmElement = new PresentationVmElement(slide, vm->widget());
+                    parseXmlDimensions(tmpNode, vmElement);
+
+                    slide->m_elements.append(vmElement);
+                }
+                else{
+                    qWarning() << "vm node does not contain \"id\" attribute.";
+
+                }
+            }
             else{
                 qWarning() << "Unknown node: <" + nodeStr + ">. Ignoring.";
             }
@@ -345,7 +377,7 @@ Presentation::Presentation(QString path) {
         m_netManager = new NetworkManager(getFilePath("nets.xml"));
         m_netManager->setVirtualMachineManager(m_vmManager);
         m_vmManager->setNetworkManager(m_netManager);
-        parseXml();
+        parseRootXml();
         
     }
     catch(PresentationException &e){
