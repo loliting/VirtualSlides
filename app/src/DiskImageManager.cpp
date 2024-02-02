@@ -87,5 +87,5 @@ void DiskImageManager::CleanUp(){
     for(auto diskImage : m_diskImages){
         delete diskImage;
     }
-    m_diskImages.~QMap();
+    m_initializated = false;
 }
