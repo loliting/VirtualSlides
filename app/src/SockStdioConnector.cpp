@@ -11,7 +11,9 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    return app->Exec();
+    int ret = app->Exec();
+    SockStdioConnectorApp::CleanUp();
+    return ret;
 }
 
 SockStdioConnectorApp* SockStdioConnectorApp::Instance(int &argc, char* argv[]){
