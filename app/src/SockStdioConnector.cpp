@@ -52,10 +52,12 @@ void SockStdioConnectorApp::readStdin() {
 
 void SockStdioConnectorApp::writeToSockImpl(char c){
     m_socket->write(&c, 1);
+    m_socket->flush();
 }
 
 void SockStdioConnectorApp::readSock(){
-    QTextStream(stdout) << m_socket->readAll();
+    QTextStream out(stdout);
+    out << m_socket->readAll();
 }
 
 int SockStdioConnectorApp::Exec(){
@@ -66,7 +68,7 @@ int SockStdioConnectorApp::Exec(){
     }
 
     connect(this, SIGNAL(writeToSock(char)), this, SLOT(writeToSockImpl(char)));
-    connect(m_socket, SIGNAL(bytesWritten(qint64)), this, SLOT(readSock(void)));
+    connect(m_socket, SIGNAL(readyRead()), this, SLOT(readSock(void)));
 
     QThread::create(readStdin)->start();
     return QCoreApplication::exec();
