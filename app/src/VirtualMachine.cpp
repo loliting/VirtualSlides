@@ -3,6 +3,9 @@
 #include <QtCore/QDebug>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryFile>
+#include <QtCore/QUuid>
+#include <QtCore/QThread>
+#include <QtWidgets/QMessageBox>
 
 #include "Application.hpp"
 #include "DiskImageManager.hpp"
@@ -217,7 +220,6 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     }
 
     createImageFile();
-    createWidget();
 }
 
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
@@ -230,7 +232,6 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
     m_macAddress = m_net->generateNewMacAddress();
 
     createImageFile();
-    createWidget();
 }
 
 void VirtualMachine::createImageFile(){
@@ -254,11 +255,6 @@ void VirtualMachine::createImageFile(){
     m_imageFile.close();
 }
 
-void VirtualMachine::createWidget(){
-    assert(m_imageFile.fileName() != nullptr);
-    m_widget = new VirtualMachineWidget(this);
-}
-
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
     ret << "-machine" << "microvm,acpi=off"
@@ -273,7 +269,8 @@ QStringList VirtualMachine::getArgs(){
         << "-kernel" << Application::applicationDirPath() + "/bzImage"
         << "-append" << KERNEL_DEFAULT_CMD
         << "-nodefaults" << "-no-user-config" << "-nographic"
-        << "-serial" << "mon:stdio"
+        << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
+        << "-serial" << "chardev:char0" // << "mon:stdio"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root";
     if(m_hasSlirpNetDev){
@@ -293,5 +290,86 @@ void VirtualMachine::setNet(Network* net){
     if(net){
         m_macAddress = net->generateNewMacAddress();
     }
+    if(m_isRunning){
+        restart();
+    }
     emit networkChanged();
+}
+
+void VirtualMachine::handleNewSocketConnection() {
+    QLocalSocket* conn = m_consoleServer->nextPendingConnection();
+    if(m_consoleSocket){
+        m_terminalSockets.append(conn);
+    }
+    else{
+        m_consoleSocket = conn;
+        emit vmStarted();
+    }
+}
+
+void VirtualMachine::start() {
+    assert(m_isRunning == 0);
+
+    m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_consoleServer->listen(m_serverName);
+    
+    if(m_consoleServer->isListening() == false) {
+        QMessageBox(QMessageBox::Critical,
+            "Virtual Slides: VM error",
+            "Failed to start VM: " + m_consoleServer->errorString(),
+            QMessageBox::Ok,
+            nullptr /* FIXME: set parent to PresentationWindow*/
+        );
+        return;
+    }
+
+    connect(m_consoleServer, SIGNAL(newConnection()),
+        this, SLOT(handleNewSocketConnection(void)));
+
+    m_vmProcess = new QProcess();
+
+    m_vmProcess->setProgram("qemu-system-x86_64");
+    m_vmProcess->setArguments(getArgs());
+    m_vmProcess->start();
+    connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(stop()));
+
+    m_isRunning = true;
+}
+
+void VirtualMachine::stop() {
+    if(m_vmProcess && m_vmProcess->state() == QProcess::Running)
+        m_vmProcess->kill();
+    if(m_consoleSocket)
+        m_consoleSocket->disconnect();
+    if(m_consoleServer)
+        m_consoleServer->close();
+
+    m_isRunning = false;
+
+    delete m_vmProcess;
+    m_vmProcess = nullptr;
+    emit vmStopped();
+}
+
+void VirtualMachine::restart() {
+    stop();
+    start();
+}
+
+void VirtualMachine::handleTerminalSockReadReady(QLocalSocket* sock) {
+
+}
+
+void VirtualMachine::handleVmSockReadReady() {
+    QByteArray data = m_consoleSocket->readAll();
+
+    for (auto term : m_terminalSockets) {
+        term->write(data);
+        term->flush();
+    }
+}
+
+VirtualMachine::~VirtualMachine() {
+    stop();
+    delete m_consoleServer;
 }

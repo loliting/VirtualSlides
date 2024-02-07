@@ -20,8 +20,6 @@ public:
     VirtualMachineWidget(VirtualMachine* vm);
     ~VirtualMachineWidget();
 private:
-    bool m_isRunning = false;
-
     VirtualMachine* m_vm = nullptr;
 
     QLabel* m_title = new QLabel(this);
@@ -31,8 +29,6 @@ private:
     QPushButton* m_stopButton = new QPushButton(QIcon(":/icons/stop.png"), "Stop", this);
     QPushButton* m_restartButton = new QPushButton(QIcon(":/icons/restart.png"), "Restart", this);
     QTermWidget* m_terminal = new QTermWidget(0, this);
-
-    QStringList m_args;
 private slots:
     void handleNetworkChanged();
 public slots:

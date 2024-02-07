@@ -131,19 +131,19 @@ PresentationImageElement::~PresentationImageElement() {
     delete m_widget;
 }
 
-PresentationVmElement::PresentationVmElement(QWidget* parent, VirtualMachineWidget* widget)
+PresentationVmElement::PresentationVmElement(QWidget* parent, VirtualMachine* vm)
     : PresentationElement()
 {
-    m_widget = widget;
+    m_widget = new VirtualMachineWidget(vm);
     m_widget->setParent(parent);
     setWidget(m_widget);
     m_widget->show();
 }
 
-PresentationVmElement::PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachineWidget* widget)
+PresentationVmElement::PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachine* vm)
     : PresentationElement(x, y, width, height)
 {
-    PresentationVmElement(parent, widget);
+    PresentationVmElement(parent, vm);
 }
 
 PresentationSlide::PresentationSlide(QColor bg) {
@@ -341,7 +341,7 @@ void Presentation::parseRootXml() {
                 VirtualMachine* vm = m_vmManager->getVirtualMachine(vmId);
                 PresentationVmElement* vmElement = nullptr;
                 if(vm){
-                    vmElement = new PresentationVmElement(slide, vm->widget());
+                    vmElement = new PresentationVmElement(slide, vm);
                     parseXmlDimensions(tmpNode, vmElement);
 
                     slide->m_elements.append(vmElement);

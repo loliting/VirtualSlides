@@ -5,6 +5,9 @@
 #include <QtCore/QString>
 #include <QtCore/QList>
 #include <QtCore/QTemporaryFile>
+#include <QtCore/QProcess>
+#include <QtNetwork/QLocalSocket>
+#include <QtNetwork/QLocalServer>
 
 #include <exception>
 
@@ -66,18 +69,15 @@ class VirtualMachine : public QObject
     Q_PROPERTY(Network* net READ net WRITE setNet NOTIFY networkChanged);
 public:
     QString id() const { return m_id; }
-
-    VirtualMachineWidget* widget() const { return m_widget; }
     Network* net() const { return m_net; }
+    QString serverName() const { return m_serverName; }
     void setNet(Network* net);
-    QStringList getArgs();
+    ~VirtualMachine();
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
     VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
 
-    void createWidget();
     void createImageFile();
-
     QString m_id;
     QString m_netId;
     Network* m_net = nullptr;
@@ -95,10 +95,32 @@ private:
     QList<FileObjective> m_fileObjectives;
     QList<CommandObjective> m_commandObjectives;
 
-    VirtualMachineWidget* m_widget = nullptr;
     QTemporaryFile m_imageFile;
+
+
+    QStringList getArgs();
+    bool m_isRunning = false;
+    QProcess* m_vmProcess;
+
+    QString m_serverName;
+    QLocalServer* m_consoleServer = new QLocalServer();
+    QLocalSocket* m_consoleSocket = nullptr;
+    QList<QLocalSocket*> m_terminalSockets;
+
 signals:
     void networkChanged();
+    void vmStarted();
+    void vmStopped();
+
+private slots:
+    void handleNewSocketConnection();
+    void handleVmSockReadReady();
+    void handleTerminalSockReadReady(QLocalSocket* sock);
+
+public slots:
+    void start();
+    void stop();
+    void restart();
 
     friend class VirtualMachineManager;
 };

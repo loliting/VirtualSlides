@@ -95,8 +95,8 @@ class PresentationVmElement : public PresentationElement
 {
     Q_OBJECT
 public:
-    PresentationVmElement(QWidget* parent, VirtualMachineWidget* widget);
-    PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachineWidget* widget);
+    PresentationVmElement(QWidget* parent, VirtualMachine* vm);
+    PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachine* vm);
 private:
     VirtualMachineWidget* m_widget;
 };
