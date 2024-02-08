@@ -64,6 +64,7 @@ void SockStdioConnectorApp::readSock(){
 
 void SockStdioConnectorApp::printSocketError() {
     QTextStream(stderr) << "Socket error occurred: " << m_socket->errorString() << '\n';
+    exit(1);
 }
 
 int SockStdioConnectorApp::Exec(){
@@ -75,8 +76,9 @@ int SockStdioConnectorApp::Exec(){
 
     connect(this, SIGNAL(writeToSock(char)), this, SLOT(writeToSockImpl(char)));
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(readSock(void)));
-    connect(m_socket, SIGNAL(errorOccurred()), this, SLOT(printSocketError(void)));
 
+    /* For some reason connecting via SIGNAL() for this signal does not work */
+    connect(m_socket, &QLocalSocket::errorOccurred, this, &SockStdioConnectorApp::printSocketError);
     QThread::create(readStdin)->start();
     return QCoreApplication::exec();
 }
