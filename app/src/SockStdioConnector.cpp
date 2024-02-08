@@ -62,6 +62,10 @@ void SockStdioConnectorApp::readSock(){
     out << m_socket->readAll();
 }
 
+void SockStdioConnectorApp::printSocketError() {
+    QTextStream(stderr) << "Socket error occurred: " << m_socket->errorString() << '\n';
+}
+
 int SockStdioConnectorApp::Exec(){
     m_socket->connectToServer(m_socketName);
     if(m_socket->waitForConnected(1000) == false){
@@ -71,6 +75,7 @@ int SockStdioConnectorApp::Exec(){
 
     connect(this, SIGNAL(writeToSock(char)), this, SLOT(writeToSockImpl(char)));
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(readSock(void)));
+    connect(m_socket, SIGNAL(errorOccurred()), this, SLOT(printSocketError(void)));
 
     QThread::create(readStdin)->start();
     return QCoreApplication::exec();
