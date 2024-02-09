@@ -2,10 +2,17 @@
 
 #include <QtCore/QThread>
 
+#include <termios.h>
 
 SockStdioConnectorApp* SockStdioConnectorApp::m_instance = nullptr;
 
 int main(int argc, char* argv[]) {
+    struct termios term;
+    tcgetattr(fileno(stdin), &term);
+
+    term.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(fileno(stdin), 0, &term);
+
     SockStdioConnectorApp* app = SockStdioConnectorApp::Instance(argc, argv);
     if(app == nullptr){
         exit(1);
