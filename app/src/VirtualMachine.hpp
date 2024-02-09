@@ -100,10 +100,11 @@ private:
 
     QStringList getArgs();
     bool m_isRunning = false;
+    bool m_shouldRestart = false; /* Should vm restart instead of stopping on stop() */
     QProcess* m_vmProcess;
 
     QString m_serverName;
-    QLocalServer* m_consoleServer = new QLocalServer();
+    QLocalServer* m_consoleServer = nullptr;
     QLocalSocket* m_consoleSocket = nullptr;
     QList<QLocalSocket*> m_terminalSockets;
 
@@ -116,7 +117,7 @@ private slots:
     void handleNewSocketConnection();
     void handleVmSockReadReady();
     void handleTerminalSockReadReady(QLocalSocket* sock);
-
+    void handleVmProcessFinished(int);
 public slots:
     void start();
     void stop();

@@ -2,6 +2,8 @@
 
 #include <QtCore/QDebug>
 
+#include "Application.hpp"
+
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     : QWidget()
 {
@@ -11,6 +13,7 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     handleNetworkChanged();
 
     m_terminal->setColorScheme("WhiteOnBlack");
+    m_terminal->setAutoClose(false);
     
     connect(m_startButton, SIGNAL(clicked(bool)),
         this, SLOT(startVm(void)));
@@ -20,7 +23,11 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
         this, SLOT(restartVm(void)));
     connect(m_vm, SIGNAL(networkChanged(void)),
         this, SLOT(handleNetworkChanged(void)));
-
+    connect(m_vm, SIGNAL(vmStarted(void)),
+        this, SLOT(handleVmStarted(void)));
+    connect(m_vm, SIGNAL(vmStopped(void)),
+        this, SLOT(handleVmStopped(void)));
+    
     setLayout(m_layout);
     m_layout->addWidget(m_title, 0, 0);
     m_layout->addItem(m_titleSpacer, 0, 1);
@@ -33,7 +40,7 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
     m_restartButton->setEnabled(false);
 }
 
-VirtualMachineWidget::~VirtualMachineWidget(){
+VirtualMachineWidget::~VirtualMachineWidget() {
     m_terminal->close();
     m_layout->deleteLater();
     m_startButton->deleteLater();
@@ -43,7 +50,7 @@ VirtualMachineWidget::~VirtualMachineWidget(){
     m_terminal->deleteLater();
 }
 
-void VirtualMachineWidget::startVm(){
+void VirtualMachineWidget::startVm() {
     m_stopButton->setEnabled(false);
     m_restartButton->setEnabled(false);
     m_startButton->setEnabled(false);
@@ -51,7 +58,7 @@ void VirtualMachineWidget::startVm(){
     m_vm->start();
 }
 
-void VirtualMachineWidget::stopVm(){
+void VirtualMachineWidget::stopVm() {
     m_stopButton->setEnabled(false);
     m_restartButton->setEnabled(false);
     m_startButton->setEnabled(false);
@@ -59,9 +66,12 @@ void VirtualMachineWidget::stopVm(){
     m_vm->stop();
 }
 
-void VirtualMachineWidget::restartVm(){
-    stopVm();
-    startVm();
+void VirtualMachineWidget::restartVm() {
+    m_stopButton->setEnabled(false);
+    m_restartButton->setEnabled(false);
+    m_startButton->setEnabled(false);
+
+    m_vm->restart();
 }
 
 void VirtualMachineWidget::handleNetworkChanged() {
@@ -71,4 +81,28 @@ void VirtualMachineWidget::handleNetworkChanged() {
     else{
         m_title->setText(m_vm->id());
     }
+    setWindowTitle(m_title->text());
+}
+
+void VirtualMachineWidget::handleVmStopped() {
+    m_stopButton->setEnabled(false);
+    m_restartButton->setEnabled(false);
+    m_startButton->setEnabled(true);
+}
+
+void VirtualMachineWidget::handleVmStarted() {
+    m_stopButton->setEnabled(true);
+    m_restartButton->setEnabled(true);
+    m_startButton->setEnabled(false);
+
+    m_terminal->close();
+    m_terminal->deleteLater();
+
+    m_terminal = new QTermWidget(0, this);
+    m_terminal->setColorScheme("WhiteOnBlack");
+    m_terminal->setAutoClose(false);
+    m_layout->addWidget(m_terminal, 1, 0, 1, 5);
+    m_terminal->setShellProgram(Application::applicationDirPath() +  "/vs-sock-stdio-connector");
+    m_terminal->setArgs(QStringList(m_vm->serverName()));
+    m_terminal->startShellProgram();
 }

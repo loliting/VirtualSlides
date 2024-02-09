@@ -270,7 +270,7 @@ QStringList VirtualMachine::getArgs(){
         << "-append" << KERNEL_DEFAULT_CMD
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
-        << "-serial" << "chardev:char0" // << "mon:stdio"
+        << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root";
     if(m_hasSlirpNetDev){
@@ -300,16 +300,20 @@ void VirtualMachine::handleNewSocketConnection() {
     QLocalSocket* conn = m_consoleServer->nextPendingConnection();
     if(m_consoleSocket){
         m_terminalSockets.append(conn);
+        connect(conn, &QLocalSocket::readyRead, this, [this, conn]{ handleTerminalSockReadReady(conn); });
     }
     else{
         m_consoleSocket = conn;
+        connect(m_consoleSocket, SIGNAL(readyRead()), this, SLOT(handleVmSockReadReady()));
         emit vmStarted();
     }
 }
 
 void VirtualMachine::start() {
-    assert(m_isRunning == 0);
+    if(m_isRunning)
+        return;
 
+    m_consoleServer = new QLocalServer();
     m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_consoleServer->listen(m_serverName);
     
@@ -318,8 +322,8 @@ void VirtualMachine::start() {
             "Virtual Slides: VM error",
             "Failed to start VM: " + m_consoleServer->errorString(),
             QMessageBox::Ok,
-            nullptr /* FIXME: set parent to PresentationWindow*/
-        );
+            nullptr
+        ).exec();
         return;
     }
 
@@ -331,33 +335,64 @@ void VirtualMachine::start() {
     m_vmProcess->setProgram("qemu-system-x86_64");
     m_vmProcess->setArguments(getArgs());
     m_vmProcess->start();
-    connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(stop()));
+    connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(handleVmProcessFinished(int)));
 
     m_isRunning = true;
 }
 
-void VirtualMachine::stop() {
-    if(m_vmProcess && m_vmProcess->state() == QProcess::Running)
-        m_vmProcess->kill();
-    if(m_consoleSocket)
+void VirtualMachine::handleVmProcessFinished(int exitCode) {
+    if(m_consoleSocket){
         m_consoleSocket->disconnect();
-    if(m_consoleServer)
+        m_consoleSocket->deleteLater();
+    }
+    m_consoleSocket = nullptr;
+
+    for (auto termSock : m_terminalSockets) {
+        termSock->close();
+        termSock->deleteLater();
+    }
+    m_terminalSockets.clear();
+
+    if(m_consoleServer){
         m_consoleServer->close();
+        m_consoleServer->deleteLater();
+    }
+    m_consoleServer = nullptr;
+
+    if(exitCode != 0){
+        QMessageBox(QMessageBox::Critical,
+            "Virtual Slides: VM error",
+            "QEMU failed: " + m_vmProcess->readAllStandardError(),
+            QMessageBox::Ok,
+            nullptr
+        ).exec();
+    }
 
     m_isRunning = false;
 
-    delete m_vmProcess;
+    m_vmProcess->deleteLater();
     m_vmProcess = nullptr;
+
     emit vmStopped();
+    if(m_shouldRestart) {
+        m_shouldRestart = false;
+        start();
+    }
+}
+
+void VirtualMachine::stop() {
+    if(m_vmProcess && m_vmProcess->state() == QProcess::Running){
+        m_vmProcess->terminate();
+    }
 }
 
 void VirtualMachine::restart() {
+    m_shouldRestart = true;
     stop();
-    start();
 }
 
 void VirtualMachine::handleTerminalSockReadReady(QLocalSocket* sock) {
-
+    m_consoleSocket->write(sock->readAll());
 }
 
 void VirtualMachine::handleVmSockReadReady() {
@@ -371,5 +406,4 @@ void VirtualMachine::handleVmSockReadReady() {
 
 VirtualMachine::~VirtualMachine() {
     stop();
-    delete m_consoleServer;
 }
