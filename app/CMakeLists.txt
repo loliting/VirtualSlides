@@ -41,6 +41,7 @@ target_link_libraries(virtual-slides PRIVATE
     Qt5::Core
     Qt5::Gui
     Qt5::Widgets
+    Qt5::Network
     qtermwidget5
     libzip::zip
 )
