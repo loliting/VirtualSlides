@@ -6,6 +6,7 @@
 #include <QtCore/QUuid>
 #include <QtCore/QThread>
 #include <QtWidgets/QMessageBox>
+#include <QtCore/qprocessordetection.h>
 
 #include "Application.hpp"
 #include "DiskImageManager.hpp"
@@ -258,7 +259,9 @@ void VirtualMachine::createImageFile(){
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
     ret << "-machine" << "microvm,acpi=off"
-        // FIXME: add -enable-kvm flag on kvm enabled hosts, change cpu type to host
+        #ifdef Q_PROCESSOR_X86_64
+        << "-enable-kvm" << "-cpu" << "host"
+        #endif
         << "-m" << "128M" << "-mem-prealloc"
         << "-no-reboot"
         /* 
