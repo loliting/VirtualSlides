@@ -10,7 +10,8 @@ int main(int argc, char* argv[]) {
     struct termios term;
     tcgetattr(fileno(stdin), &term);
 
-    term.c_lflag &= ~(ECHO | ICANON);
+    cfmakeraw(&term);
+    
     tcsetattr(fileno(stdin), 0, &term);
 
     SockStdioConnectorApp* app = SockStdioConnectorApp::Instance(argc, argv);
