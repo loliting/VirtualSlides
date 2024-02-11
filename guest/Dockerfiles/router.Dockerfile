@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-COPY init /sbin/vs_init
+COPY init/target/x86_64-unknown-linux-gnu/release/init /sbin/vs_init
 
 RUN echo "Router" > /etc/hostname
 
@@ -19,7 +19,7 @@ RUN echo "[Service]\nExecStart=\nExecStart=-/sbin/agetty -o '-p -f -- \\u' --kee
 RUN mkdir -p /etc/network
 RUN echo "auto eth0\niface eth0 inet dhcp\n\nauto eth1\niface eth1 inet static\naddress 10.0.64.1\nnetmask 255.255.255.0" > /etc/network/interfaces
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
     ifupdown \
     kea-dhcp4-server \
     iputils-ping \

@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-COPY init /sbin/vs_init
+COPY init/target/x86_64-unknown-linux-gnu/release/init /sbin/vs_init
 
 RUN echo "bookworm" > /etc/hostname
 
