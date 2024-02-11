@@ -1,3 +1,6 @@
+#ifndef DISKIMAGEMANAGER_HPP
+#define DISKIMAGEMANAGER_HPP
+
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QMap>
@@ -31,3 +34,5 @@ private:
     static bool m_initializated;
     static QMap<QString, DiskImage*> m_diskImages;
 };
+
+#endif // DISKIMAGEMANAGER_HPP
