@@ -17,6 +17,7 @@ class VirtualMachine;
 
 #include "Network.hpp"
 #include "VirtualMachineWidget.hpp"
+#include "DiskImageManager.hpp"
 
 class VirtualMachineException : public std::exception
 {
@@ -86,6 +87,7 @@ private:
     bool m_hasSlirpNetDev = false;
 
     QString m_image;
+    DiskImage* m_diskImage;
 
     QString m_hostname;
     bool m_dhcpClient = true;

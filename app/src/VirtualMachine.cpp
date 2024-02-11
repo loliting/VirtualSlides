@@ -9,13 +9,12 @@
 #include <QtCore/qprocessordetection.h>
 
 #include "Application.hpp"
-#include "DiskImageManager.hpp"
 
 using namespace rapidxml;
 
-#define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw init=/sbin/vs_init selinux=0"
-#define KERNEL_QUIET_CMD KERNEL_DEFAULT_CMD " quiet"
-#define KERNEL_EARLYPRINTK_CMD KERNEL_DEFAULT_CMD " earlyprintk=ttyS0"
+#define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw selinux=0 init=/sbin/vs_init "
+#define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
+#define KERNEL_EARLYPRINTK_CMD "earlyprintk=ttyS0 " KERNEL_DEFAULT_CMD
 
 static bool getBool(QString boolStr, bool defaultValue){
     QString lowerBoolStr = boolStr.toLower();
@@ -236,8 +235,8 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
 }
 
 void VirtualMachine::createImageFile(){
-    DiskImage* diskImage = DiskImageManager::getDiskImage(m_image);
-    if(diskImage == nullptr){
+    m_diskImage = DiskImageManager::getDiskImage(m_image);
+    if(m_diskImage == nullptr){
         throw VirtualMachineException("Could not create vm \"" + m_id + "\": image \"" + m_image + "\" does not exist");
     }
 
@@ -245,9 +244,9 @@ void VirtualMachine::createImageFile(){
         throw VirtualMachineException("Could not create temporary file: " + m_imageFile.errorString());
     }
     m_imageFile.setAutoRemove(false);
-    QFile orginalDiskFile(diskImage->path);
+    QFile orginalDiskFile(m_diskImage->path);
     if(orginalDiskFile.open(QIODevice::ReadOnly) == false){
-        QString exceptionStr = "Could not open disk image \"" + diskImage->path + "\": ";
+        QString exceptionStr = "Could not open disk image \"" + m_diskImage->path + "\": ";
         exceptionStr += orginalDiskFile.errorString();
         throw VirtualMachineException(exceptionStr);
     }
@@ -270,7 +269,7 @@ QStringList VirtualMachine::getArgs(){
          * path, track kernel versions and store multiple releases
          */
         << "-kernel" << Application::applicationDirPath() + "/bzImage"
-        << "-append" << KERNEL_DEFAULT_CMD
+        << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
         << "-serial" << "chardev:char0"

@@ -27,26 +27,23 @@ if [ -z $VS_DIST ]; then
     exit 1    
 fi
 
-# If $CC is not set, set it to gcc
-CC="${CC:-gcc}"
+pushd ./init >> /dev/null
 
 # Build our init system
-if [ -z $VS_INIT_SYS ]; then
-    gcc -Wall -o init -static init.c
-else
-    gcc -Wall -DINIT_SYS="\"$VS_INIT_SYS\"" -o init -static init.c
-fi
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-gnu --release
 on_error "Init sys build failed."
 
+popd >> /dev/null
+
 # Build .tar fs from specified Dockerfile 
-docker build --output "type=tar,dest=$VS_DIST.tar" -f ./Dockerfiles/$VS_DIST.Dockerfile .
+docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" -f ./Dockerfiles/$VS_DIST.Dockerfile .
 on_error "Docker build failed."
 
 # Make .qcow2 image from .tar fs 
 virt-make-fs --format=qcow2 --size=+256M $VS_DIST.tar $VS_DIST-large.qcow2
 on_error "Creating .qcow2 image failed."
 
-# Trim unused space from the imaage
+# Trim unused space from the image
 qemu-img convert $VS_DIST-large.qcow2 -O qcow2 $VS_DIST.qcow2
 on_error "Trimming .qcow2 image failed."
 

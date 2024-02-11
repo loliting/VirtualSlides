@@ -3,5 +3,9 @@
 /guest/kernel/bzImage
 /guest/*.qcow2
 /guest/*.tar
-/guest/init
 /build
+
+# Rust
+/guest/init/target/
+Cargo.lock
+*.rs.bk
