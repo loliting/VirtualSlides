@@ -1,6 +1,5 @@
 FROM debian:bookworm
 
-COPY init/target/x86_64-unknown-linux-gnu/release/init /sbin/vs_init
 
 RUN echo "bookworm" > /etc/hostname
 
@@ -23,3 +22,5 @@ RUN apt-get update && apt-get install -y \
     procps \
     vim \
     nano
+
+COPY init/target/x86_64-unknown-linux-musl/release/init /sbin/vs_init

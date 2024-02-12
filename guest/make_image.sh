@@ -30,7 +30,7 @@ fi
 pushd ./init >> /dev/null
 
 # Build our init system
-CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-gnu --release
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl --release
 on_error "Init sys build failed."
 
 popd >> /dev/null

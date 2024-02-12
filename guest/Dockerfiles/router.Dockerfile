@@ -1,6 +1,5 @@
 FROM debian:bookworm
 
-COPY init/target/x86_64-unknown-linux-gnu/release/init /sbin/vs_init
 
 RUN echo "Router" > /etc/hostname
 
@@ -36,3 +35,5 @@ RUN echo "{\"Dhcp4\":{\"interfaces-config\":{\"interfaces\":[\"eth1\"]},\"lease-
 RUN systemctl enable iptables-legacy-restore
 RUN systemctl enable ifupdown-wait-online.service
 RUN systemctl enable kea-dhcp4-server
+
+COPY init/target/x86_64-unknown-linux-musl/release/init /sbin/vs_init
