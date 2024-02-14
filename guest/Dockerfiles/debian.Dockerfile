@@ -23,4 +23,4 @@ RUN apt-get update && apt-get install -y \
     vim \
     nano
 
-COPY init/target/x86_64-unknown-linux-musl/release/init /sbin/vs_init
+COPY init/target/x86_64-unknown-linux-musl/release/guest-init /sbin/vs_init
