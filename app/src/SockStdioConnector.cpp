@@ -70,9 +70,16 @@ void SockStdioConnectorApp::readSock(){
     out << m_socket->readAll();
 }
 
-void SockStdioConnectorApp::printSocketError() {
-    QTextStream(stderr) << "Socket error occurred: " << m_socket->errorString() << '\n';
-    exit(1);
+void SockStdioConnectorApp::printSocketError(QLocalSocket::LocalSocketError e) {
+    if(e == QLocalSocket::LocalSocketError::PeerClosedError){
+        QTextStream(stdout).flush();
+        exit(0);
+    }
+    else {
+        QTextStream(stdout).flush();
+        QTextStream(stderr) << "\n" << m_socket->errorString();
+        exit(1);
+    }
 }
 
 int SockStdioConnectorApp::Exec(){
@@ -84,9 +91,7 @@ int SockStdioConnectorApp::Exec(){
 
     connect(this, SIGNAL(writeToSock(char)), this, SLOT(writeToSockImpl(char)));
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(readSock(void)));
-
-    /* For some reason connecting via SIGNAL() for this signal does not work */
-    connect(m_socket, &QLocalSocket::errorOccurred, this, &SockStdioConnectorApp::printSocketError);
+    connect(m_socket, SIGNAL(errorOccurred(QLocalSocket::LocalSocketError)), this, SLOT(printSocketError(QLocalSocket::LocalSocketError)));
     QThread::create(readStdin)->start();
     return QCoreApplication::exec();
 }

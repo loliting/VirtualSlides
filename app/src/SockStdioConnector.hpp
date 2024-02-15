@@ -15,7 +15,7 @@ signals:
 private slots:
     void writeToSockImpl(char c);
     void readSock();
-    void printSocketError();
+    void printSocketError(QLocalSocket::LocalSocketError);
 private:
     SockStdioConnectorApp(int &argc, char *argv[]) : QCoreApplication(argc, argv) { }
     ~SockStdioConnectorApp() override { }
