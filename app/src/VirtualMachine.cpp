@@ -271,6 +271,9 @@ QStringList VirtualMachine::getArgs(){
         << "-kernel" << Application::applicationDirPath() + "/bzImage"
         << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
+        << "-device" << "virtio-serial-device"
+        << "-chardev" << "socket,id=virtiocon0,path=" + m_vmServer->fullServerName()
+        << "-device" << "virtconsole,chardev=virtiocon0"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
@@ -298,17 +301,30 @@ void VirtualMachine::setNet(Network* net){
     emit networkChanged();
 }
 
-void VirtualMachine::handleNewSocketConnection() {
+void VirtualMachine::handleNewConsoleSocketConnection() {
     QLocalSocket* conn = m_consoleServer->nextPendingConnection();
     if(m_consoleSocket){
         m_terminalSockets.append(conn);
-        connect(conn, &QLocalSocket::readyRead, this, [this, conn]{ handleTerminalSockReadReady(conn); });
+        connect(conn, &QLocalSocket::readyRead, this, [this, conn]{ handleClientConsoleSockReadReady(conn); });
     }
     else{
         m_consoleSocket = conn;
-        connect(m_consoleSocket, SIGNAL(readyRead()), this, SLOT(handleVmSockReadReady()));
+        connect(m_consoleSocket, SIGNAL(readyRead()), this, SLOT(handleConsoleSockReadReady()));
         emit vmStarted();
     }
+}
+
+void VirtualMachine::handleNewVmSocketConnection() {
+    if(m_vmSocket){
+        return;
+    }
+    m_vmSocket = m_vmServer->nextPendingConnection();
+    connect(m_vmSocket, SIGNAL(readyRead()),
+        this, SLOT(handleVmSockReadReady(void)));
+}
+
+void VirtualMachine::handleVmSockReadReady() {
+    qDebug() << m_vmSocket->readAll();
 }
 
 void VirtualMachine::start() {
@@ -318,6 +334,9 @@ void VirtualMachine::start() {
     m_consoleServer = new QLocalServer();
     m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_consoleServer->listen(m_serverName);
+    
+    m_vmServer = new QLocalServer();
+    m_vmServer->listen(QUuid::createUuid().toString(QUuid::WithoutBraces));
     
     if(m_consoleServer->isListening() == false) {
         QMessageBox(QMessageBox::Critical,
@@ -330,7 +349,9 @@ void VirtualMachine::start() {
     }
 
     connect(m_consoleServer, SIGNAL(newConnection()),
-        this, SLOT(handleNewSocketConnection(void)));
+        this, SLOT(handleNewConsoleSocketConnection(void)));
+    connect(m_vmServer, SIGNAL(newConnection()),
+        this, SLOT(handleNewVmSocketConnection(void)));
 
     m_vmProcess = new QProcess();
 
@@ -348,6 +369,12 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
         m_consoleSocket->deleteLater();
     }
     m_consoleSocket = nullptr;
+    
+    if(m_vmServer){
+        m_vmServer->disconnect();
+        m_vmServer->deleteLater();
+    }
+    m_vmServer = nullptr;
 
     for (auto termSock : m_terminalSockets) {
         termSock->close();
@@ -393,11 +420,11 @@ void VirtualMachine::restart() {
     stop();
 }
 
-void VirtualMachine::handleTerminalSockReadReady(QLocalSocket* sock) {
+void VirtualMachine::handleClientConsoleSockReadReady(QLocalSocket* sock) {
     m_consoleSocket->write(sock->readAll());
 }
 
-void VirtualMachine::handleVmSockReadReady() {
+void VirtualMachine::handleConsoleSockReadReady() {
     QByteArray data = m_consoleSocket->readAll();
 
     for (auto term : m_terminalSockets) {

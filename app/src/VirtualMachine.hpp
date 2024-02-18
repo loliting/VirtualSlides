@@ -110,15 +110,23 @@ private:
     QLocalSocket* m_consoleSocket = nullptr;
     QList<QLocalSocket*> m_terminalSockets;
 
+    /* Server for host-guest communication */
+    QLocalServer* m_vmServer = nullptr;
+    /* Socket for host-guest communication */
+    QLocalSocket* m_vmSocket = nullptr;
 signals:
     void networkChanged();
     void vmStarted();
     void vmStopped();
 
 private slots:
-    void handleNewSocketConnection();
+    void handleNewConsoleSocketConnection();
+    void handleConsoleSockReadReady();
+    void handleClientConsoleSockReadReady(QLocalSocket* sock);
+    
+    void handleNewVmSocketConnection();
     void handleVmSockReadReady();
-    void handleTerminalSockReadReady(QLocalSocket* sock);
+    
     void handleVmProcessFinished(int);
 public slots:
     void start();
