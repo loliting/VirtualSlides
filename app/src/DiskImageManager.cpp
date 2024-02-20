@@ -16,7 +16,7 @@ QMap<QString, DiskImage*> DiskImageManager::m_diskImages = QMap<QString, DiskIma
 void DiskImageManager::Initializate(){
     assert(m_initializated == false);
 
-    QString disksJsonPath = Application::applicationDirPath() + "/Disks.json";
+    QString disksJsonPath = Application::applicationDirPath() + "/config.json";
     QFile disksJsonFile(disksJsonPath);
     
     if(disksJsonFile.open(QIODevice::ReadOnly) == false){
