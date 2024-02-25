@@ -112,8 +112,10 @@ private:
 
     /* Server for host-guest communication */
     QLocalServer* m_vmServer = nullptr;
-    /* Socket for host-guest communication */
-    QLocalSocket* m_vmSocket = nullptr;
+    /* Read socket for host-guest communication */
+    QLocalSocket* m_vmReadSocket = nullptr;
+    /* Write socket for host-guest communication */
+    QLocalSocket* m_vmWriteSocket = nullptr;
 signals:
     void networkChanged();
     void vmStarted();
