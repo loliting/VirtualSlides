@@ -10,7 +10,10 @@
 
 #include "Application.hpp"
 
+#include "third-party/nlohmann/json.hpp"
+
 using namespace rapidxml;
+using namespace nlohmann;
 
 #define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw selinux=0 init=/sbin/vs_init "
 #define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
@@ -261,7 +264,7 @@ QStringList VirtualMachine::getArgs(){
         #ifdef Q_PROCESSOR_X86_64
         << "-enable-kvm" << "-cpu" << "host"
         #endif
-        << "-m" << "128M" << "-mem-prealloc"
+        << "-m" << "256M" << "-mem-prealloc"
         << "-no-reboot"
         /* 
          * FIXME: Implement some sort of kernel manager,
@@ -274,6 +277,8 @@ QStringList VirtualMachine::getArgs(){
         << "-device" << "virtio-serial-device"
         << "-chardev" << "socket,id=virtiocon0,path=" + m_vmServer->fullServerName()
         << "-device" << "virtconsole,chardev=virtiocon0"
+        << "-chardev" << "socket,id=virtiocon1,path=" + m_vmServer->fullServerName()
+        << "-device" << "virtconsole,chardev=virtiocon1"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
@@ -315,16 +320,25 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
 }
 
 void VirtualMachine::handleNewVmSocketConnection() {
-    if(m_vmSocket){
-        return;
+    if(m_vmReadSocket == nullptr){
+        m_vmReadSocket = m_vmServer->nextPendingConnection();
+        connect(m_vmReadSocket, SIGNAL(readyRead()),
+            this, SLOT(handleVmSockReadReady(void)));
     }
-    m_vmSocket = m_vmServer->nextPendingConnection();
-    connect(m_vmSocket, SIGNAL(readyRead()),
-        this, SLOT(handleVmSockReadReady(void)));
+    else if(m_vmWriteSocket == nullptr) {
+        m_vmWriteSocket = m_vmServer->nextPendingConnection();
+    }
 }
 
 void VirtualMachine::handleVmSockReadReady() {
-    qDebug() << m_vmSocket->readAll();
+    QTextStream(stdout) << m_vmReadSocket->readAll();
+    QTextStream(stdout).flush();
+
+    json jsonResponse;
+    jsonResponse["testField"] = "testValue";
+
+    m_vmWriteSocket->write(jsonResponse.dump().c_str());
+    m_vmWriteSocket->flush();
 }
 
 void VirtualMachine::start() {
