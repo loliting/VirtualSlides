@@ -1,10 +1,11 @@
 mod info;
+mod host_bridge;
 
 use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
 use crate::info::machine::is_machine_initializated;
-
+use crate::host_bridge::{HostBridge, Message};
 #[cfg(not(debug_assertions))]
 use std::process;
 
@@ -22,11 +23,13 @@ fn main() {
         eprintln!("usage: {} [target init system]", args[0]);
         exit(1);
     }
-    
+
+    let mut hb = HostBridge::new("/dev/hvc1", "/dev/hvc0").unwrap();
+    hb.message_host(Message::new_hello_host().unwrap()).unwrap();
+
     if is_machine_initializated() {
         println!("Machine is initializated!");
-    }
-    else {
+    } else {
         println!("Machine is not initializated!");
     }
 
