@@ -27,8 +27,8 @@ set(VS_SOURCES
     src/Network.hpp
     src/NetworkManager.cpp
     src/NetworkManager.hpp
-    src/DiskImageManager.hpp
-    src/DiskImageManager.cpp
+    src/Config.hpp
+    src/Config.cpp
     src/VirtualMachineWidget.cpp
     src/VirtualMachineWidget.hpp
 )

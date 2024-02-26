@@ -4,7 +4,7 @@
 
 #include <QtWidgets/QMessageBox>
 
-#include "DiskImageManager.hpp"
+#include "Config.hpp"
 
 Application* Application::m_instance = nullptr;
 
@@ -17,9 +17,9 @@ Application* Application::Instance(int &argc, char* argv[]) {
     assert(m_instance == nullptr);
     m_instance = new Application(argc, argv);
     try{
-        DiskImageManager::Initializate();
+        Config::Initializate();
     }
-    catch(DiskImageManagerException &e){
+    catch(ConfigException &e){
         QMessageBox msgBox(QMessageBox::Critical, "Virtual Slides", e.cause(), QMessageBox::Ok);
         msgBox.exec();
 
@@ -31,7 +31,7 @@ Application* Application::Instance(int &argc, char* argv[]) {
 }
 
 void Application::CleanUp() {
-    DiskImageManager::CleanUp();
+    Config::CleanUp();
     delete m_instance;
     m_instance = nullptr;
 }

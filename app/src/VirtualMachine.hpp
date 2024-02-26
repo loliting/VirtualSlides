@@ -17,7 +17,7 @@ class VirtualMachine;
 
 #include "Network.hpp"
 #include "VirtualMachineWidget.hpp"
-#include "DiskImageManager.hpp"
+#include "Config.hpp"
 
 class VirtualMachineException : public std::exception
 {

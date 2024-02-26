@@ -238,7 +238,7 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
 }
 
 void VirtualMachine::createImageFile(){
-    m_diskImage = DiskImageManager::getDiskImage(m_image);
+    m_diskImage = Config::getDiskImage(m_image);
     if(m_diskImage == nullptr){
         throw VirtualMachineException("Could not create vm \"" + m_id + "\": image \"" + m_image + "\" does not exist");
     }
@@ -260,18 +260,14 @@ void VirtualMachine::createImageFile(){
 
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
-    ret << "-machine" << "microvm,acpi=off"
-        #ifdef Q_PROCESSOR_X86_64
-        << "-enable-kvm" << "-cpu" << "host"
-        #endif
-        << "-m" << "256M" << "-mem-prealloc"
-        << "-no-reboot"
-        /* 
-         * FIXME: Implement some sort of kernel manager,
-         * so we can track where the kernel actually is, instead of hardcoding
-         * path, track kernel versions and store multiple releases
-         */
-        << "-kernel" << Application::applicationDirPath() + "/bzImage"
+    ret << "-machine" << "microvm,acpi=off";
+    if(Config::getKvmEnabled()){
+        ret << "-enable-kvm" << "-cpu" << "host";
+    }
+    ret << "-smp" << QString::number(Config::getGuestProcCount())
+        << "-m" << QString::number(Config::getGuestMemSize()) + "M"
+        << "-mem-prealloc" << "-no-reboot"
+        << "-kernel" << Config::getGuestKernelPath()
         << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-device" << "virtio-serial-device"
