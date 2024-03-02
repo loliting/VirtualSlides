@@ -40,7 +40,11 @@ docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" -f ./D
 on_error "Docker build failed."
 
 # Make .qcow2 image from .tar fs 
-virt-make-fs --format=qcow2 --size=+256M $VS_DIST.tar $VS_DIST-large.qcow2
+virt-make-fs \
+    --format=qcow2 \
+    --size=+4G \
+    --type=ext4 \
+    $VS_DIST.tar $VS_DIST-large.qcow2
 on_error "Creating .qcow2 image failed."
 
 # Trim unused space from the image
