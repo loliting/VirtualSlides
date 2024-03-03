@@ -4,6 +4,7 @@ use std::error::Error;
 use std::result::Result;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
@@ -15,13 +16,17 @@ pub struct HostBridge {
 
 #[derive(Serialize, Deserialize)]
 pub enum MessageType {
+    #[serde(rename = "hello-host")] 
     HelloHost,
+    #[serde(rename = "reboot")] 
     Reboot,
+    #[serde(rename = "poweroff")] 
     Poweroff
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
+    #[serde(rename = "messageType")] 
     pub mtype: MessageType,
     pub content: String
 }
@@ -61,7 +66,7 @@ impl HostBridge {
     fn write(&mut self, msg: Message) -> Result<(), Box<dyn std::error::Error>>  {
         let mut message = String::new();
         message.push_str(&serde_json::to_string(&msg)?);
-        message.push('\0'); // End of transmission Block ETB
+        message.push('\n'); // We use '\n' as msg separator, because it also flushes the buffor
         
         self.write_console.write(message.as_bytes())?;
         
@@ -71,18 +76,23 @@ impl HostBridge {
     fn read(&mut self) -> Result<(), Box<dyn std::error::Error>>  {
         let mut read_u8 = || -> Result<u8, Box<dyn std::error::Error>> {
             let mut buf: [u8;1] = [0];
-
-            self.read_console.read_exact(&mut buf)?;
+            self.read_console.read(&mut buf)?;
             Ok(buf[0])
         };
+        let now = Instant::now();
 
         let mut buf: Vec<u8> = Vec::new();
         let mut c: u8 = read_u8()?;
-        while c != b'\0' {
+        while c != b'\n' {
             buf.push(c);
             c = read_u8()?;
         }
-        println!("buf: {}", String::from_utf8(buf).unwrap());
+        if buf.len() <= 256{
+            println!("buf: {}", String::from_utf8(buf.clone()).unwrap());
+
+        }
+        let elapsed = now.elapsed();
+        println!("Read {} bytes in: {:.2?}", buf.len(), elapsed);
         Ok(())
     }
 

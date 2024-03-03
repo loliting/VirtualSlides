@@ -332,8 +332,9 @@ void VirtualMachine::handleVmSockReadReady() {
 
     json jsonResponse;
     jsonResponse["testField"] = "testValue";
-
-    m_vmWriteSocket->write(jsonResponse.dump().c_str());
+    std::string jsonResponseStr = jsonResponse.dump() + "\n";
+    m_vmWriteSocket->write(jsonResponseStr.c_str(), jsonResponseStr.length());
+    qDebug() << "Wrote" << jsonResponseStr.length() << "bytes";
     m_vmWriteSocket->flush();
 }
 
@@ -420,7 +421,9 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
 }
 
 void VirtualMachine::stop() {
-    if(m_vmProcess && m_vmProcess->state() == QProcess::Running){
+    if(!m_isRunning || !m_vmProcess)
+        return;
+    if(m_vmProcess->state() == QProcess::Running){
         m_vmProcess->terminate();
     }
 }
