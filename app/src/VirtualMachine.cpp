@@ -10,10 +10,7 @@
 
 #include "Application.hpp"
 
-#include "third-party/nlohmann/json.hpp"
-
 using namespace rapidxml;
-using namespace nlohmann;
 
 #define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw selinux=0 init=/sbin/vs_init "
 #define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
@@ -318,24 +315,14 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
 void VirtualMachine::handleNewVmSocketConnection() {
     if(m_vmReadSocket == nullptr){
         m_vmReadSocket = m_vmServer->nextPendingConnection();
-        connect(m_vmReadSocket, SIGNAL(readyRead()),
-            this, SLOT(handleVmSockReadReady(void)));
     }
     else if(m_vmWriteSocket == nullptr) {
         m_vmWriteSocket = m_vmServer->nextPendingConnection();
     }
-}
 
-void VirtualMachine::handleVmSockReadReady() {
-    QTextStream(stdout) << m_vmReadSocket->readAll();
-    QTextStream(stdout).flush();
-
-    json jsonResponse;
-    jsonResponse["testField"] = "testValue";
-    std::string jsonResponseStr = jsonResponse.dump() + "\n";
-    m_vmWriteSocket->write(jsonResponseStr.c_str(), jsonResponseStr.length());
-    qDebug() << "Wrote" << jsonResponseStr.length() << "bytes";
-    m_vmWriteSocket->flush();
+    if(m_vmReadSocket && m_vmWriteSocket){
+        m_guestBridge = new GuestBridge(this);
+    }
 }
 
 void VirtualMachine::start() {
@@ -381,6 +368,10 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
     }
     m_consoleSocket = nullptr;
     
+    if(m_guestBridge) {
+        m_guestBridge->deleteLater();
+    }
+    m_guestBridge = nullptr;
     if(m_vmServer){
         m_vmServer->disconnect();
         m_vmServer->deleteLater();

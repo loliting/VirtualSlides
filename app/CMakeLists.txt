@@ -29,6 +29,8 @@ set(VS_SOURCES
     src/NetworkManager.hpp
     src/Config.hpp
     src/Config.cpp
+    src/GuestBridge.hpp
+    src/GuestBridge.cpp
     src/VirtualMachineWidget.cpp
     src/VirtualMachineWidget.hpp
 )

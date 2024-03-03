@@ -18,6 +18,7 @@ class VirtualMachine;
 #include "Network.hpp"
 #include "VirtualMachineWidget.hpp"
 #include "Config.hpp"
+#include "GuestBridge.hpp"
 
 class VirtualMachineException : public std::exception
 {
@@ -116,6 +117,8 @@ private:
     QLocalSocket* m_vmReadSocket = nullptr;
     /* Write socket for host-guest communication */
     QLocalSocket* m_vmWriteSocket = nullptr;
+
+    GuestBridge* m_guestBridge = nullptr;
 signals:
     void networkChanged();
     void vmStarted();
@@ -127,7 +130,6 @@ private slots:
     void handleClientConsoleSockReadReady(QLocalSocket* sock);
     
     void handleNewVmSocketConnection();
-    void handleVmSockReadReady();
     
     void handleVmProcessFinished(int);
 public slots:
@@ -136,6 +138,7 @@ public slots:
     void restart();
 
     friend class VirtualMachineManager;
+    friend class GuestBridge;
 };
 
 #endif // VIRTUALMACHINE_HPP
