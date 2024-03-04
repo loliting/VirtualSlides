@@ -62,6 +62,8 @@ void Config::Initializate() {
             throw ConfigException(exceptionStr);   
         }
 
+        diskImage->name = diskImage->name.simplified().toLower().replace(' ', "-");
+
         QFileInfo diskFileInfo(Application::applicationDirPath() + "/" + diskImage->path);
         if(diskFileInfo.exists() == false){
             QString exceptionStr = "Failed to parse \"" + configJsonPath + "\": ";
@@ -156,7 +158,8 @@ void Config::Initializate() {
 
 DiskImage* Config::getDiskImage(QString name) {
     assert(m_initializated == true);
-    return m_diskImages.value(name, nullptr);
+    
+    return m_diskImages.value(name.simplified().toLower().replace(' ', "-"), nullptr);
 }
 
 size_t Config::getGuestMemSize() {
