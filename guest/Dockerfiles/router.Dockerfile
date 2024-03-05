@@ -16,7 +16,8 @@ RUN echo "[Service]\nExecStart=\nExecStart=-/sbin/agetty -o '-p -f -- \\u' --kee
 
 # Configure network interfaces
 RUN mkdir -p /etc/network
-RUN echo "auto eth0\niface eth0 inet dhcp\n\nauto eth1\niface eth1 inet static\naddress 10.0.64.1\nnetmask 255.255.255.0" > /etc/network/interfaces
+RUN printf "auto eth1\niface eth1 inet dhcp4\n\n" >> /etc/network/interfaces
+RUN printf "auto eth0\niface eth0 inet static\n\taddress 10.0.64.1\n\tnetmask 255.255.255.0\n" >> /etc/network/interfaces
 
 RUN apt-get update && apt-get install -y \
     ifupdown \
@@ -25,7 +26,8 @@ RUN apt-get update && apt-get install -y \
     systemd \
     systemd-sysv \
     udev \
-    iptables
+    iptables \
+    vim
 
 # Configure DHCPv4 server
 RUN mkdir -p /etc/kea
@@ -36,7 +38,7 @@ RUN systemctl enable iptables-legacy-restore
 RUN systemctl enable ifupdown-wait-online.service
 RUN systemctl enable kea-dhcp4-server
 
-RUN systemctl mask getty@hvc0.service
-RUN systemctl mask getty@hvc1.service
+RUN systemctl mask serial-getty@hvc0.service
+RUN systemctl mask serial-getty@hvc1.service
 
 COPY init/target/x86_64-unknown-linux-musl/release/guest-init /sbin/vs_init

@@ -276,13 +276,13 @@ QStringList VirtualMachine::getArgs(){
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root";
-    if(m_hasSlirpNetDev){
-        ret << "-netdev" << "user,id=net0,net=100.127.254.0/24,dhcpstart=100.127.254.8"
-            << "-device" << "virtio-net-device,netdev=net0,mac=00:00:00:00:00:01";
-    }
     if(!m_macAddress.isEmpty() && m_net){
-        ret << "-netdev" << "socket,id=net1,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
-            << "-device" << "virtio-net-device,netdev=net1,mac=" + m_macAddress;
+        ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
+            << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
+    }
+    if(m_hasSlirpNetDev){
+        ret << "-netdev" << "user,id=eth1,net=100.127.254.0/24,dhcpstart=100.127.254.8"
+            << "-device" << "virtio-net-device,netdev=eth1,mac=00:00:00:00:00:01";
     }
     
     return ret;
