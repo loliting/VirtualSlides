@@ -36,4 +36,7 @@ RUN systemctl enable iptables-legacy-restore
 RUN systemctl enable ifupdown-wait-online.service
 RUN systemctl enable kea-dhcp4-server
 
+RUN systemctl mask getty@hvc0.service
+RUN systemctl mask getty@hvc1.service
+
 COPY init/target/x86_64-unknown-linux-musl/release/guest-init /sbin/vs_init
