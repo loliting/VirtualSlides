@@ -5,8 +5,8 @@ RUN echo "bookworm" > /etc/hostname
 
 # Configure network
 RUN mkdir -p /etc/network
-RUN printf "auto eth0\niface eth0 inet dhcp4\n" >> /etc/network/interfaces
-RUN printf "auto eth1\niface eth1 inet dhcp4\n" >> /etc/network/interfaces
+RUN printf "auto eth0\niface eth0 inet dhcp\n\n" >> /etc/network/interfaces
+RUN printf "auto eth1\niface eth1 inet dhcp\n\n" >> /etc/network/interfaces
 
 # Set autologin to root on serial tty, also set TERM to `xterm-256color`
 RUN mkdir -p /etc/systemd/system/serial-getty@ttyS0.service.d
