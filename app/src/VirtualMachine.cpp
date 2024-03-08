@@ -372,11 +372,14 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
         m_guestBridge->deleteLater();
     }
     m_guestBridge = nullptr;
+
     if(m_vmServer){
         m_vmServer->disconnect();
         m_vmServer->deleteLater();
     }
     m_vmServer = nullptr;
+    m_vmReadSocket = nullptr;
+    m_vmWriteSocket = nullptr;
 
     for (auto termSock : m_terminalSockets) {
         termSock->close();
