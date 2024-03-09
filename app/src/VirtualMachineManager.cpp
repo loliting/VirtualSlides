@@ -86,6 +86,8 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
                 vm->m_dhcpServer = net->hasDhcpServerEnabled();
             }
             vm->setNet(net);
+            if(vm->m_hasSlirpNetDev)
+                vm->start();
         }
         else if(vm->m_netId != nullptr){
             QString exceptionStr = "vms.xml: vm \"" + vm->m_id + "\": ";
