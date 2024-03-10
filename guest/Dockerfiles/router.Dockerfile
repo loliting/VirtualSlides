@@ -16,8 +16,8 @@ RUN echo "[Service]\nExecStart=\nExecStart=-/sbin/agetty -o '-p -f -- \\u' --kee
 
 # Configure network interfaces
 RUN mkdir -p /etc/network
-RUN printf "auto eth1\niface eth1 inet dhcp\n\n" >> /etc/network/interfaces
-RUN printf "auto eth0\niface eth0 inet static\n\taddress 10.0.64.1\n\tnetmask 255.255.255.0\n" >> /etc/network/interfaces
+RUN printf "allow-hotplug eth1\niface eth1 inet dhcp\n\n" >> /etc/network/interfaces
+RUN printf "allow-hotplug eth0\niface eth0 inet static\n\taddress 10.0.64.1\n\tnetmask 255.255.255.0\n" >> /etc/network/interfaces
 
 RUN apt-get update && apt-get install -y \
     ifupdown \
@@ -42,3 +42,6 @@ RUN systemctl mask serial-getty@hvc0.service
 RUN systemctl mask serial-getty@hvc1.service
 
 COPY init/target/x86_64-unknown-linux-musl/release/guest-init /sbin/vs_init
+RUN ln -sf /sbin/vs_init /sbin/reboot
+RUN ln -sf /sbin/vs_init /sbin/poweroff
+RUN ln -sf /sbin/vs_init /sbin/shutdown

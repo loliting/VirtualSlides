@@ -8,6 +8,9 @@ use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
+const WRITE_CONSOLE_PATH: &str = "/dev/hvc0";
+const READ_CONSOLE_PATH: &str = "/dev/hvc1";
+
 
 pub struct HostBridge {
     read_console: File,
@@ -16,50 +19,43 @@ pub struct HostBridge {
 
 #[derive(Serialize, Deserialize)]
 pub enum MessageType {
-    #[serde(rename = "hello-host")] 
-    HelloHost,
     #[serde(rename = "reboot")] 
-    Reboot,
-    #[serde(rename = "poweroff")] 
-    Poweroff
+    Reboot
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
-    #[serde(rename = "messageType")] 
-    pub mtype: MessageType,
-    pub content: String
+    #[serde(rename = "type")] 
+    pub mtype: MessageType
 }
 
 impl Message {
-    pub fn new_hello_host() -> Result<Self, Box<dyn Error>> {
+    pub fn new_reboot() -> Result<Self, Box<dyn Error>> {
         Ok(
             Message{
-                mtype: MessageType::HelloHost,
-                content: "".to_string()
+                mtype: MessageType::Reboot
             }
         )
     }
 }
 
 impl HostBridge {
-    pub fn new(read_console_path: &str, write_console_path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let read_console = File::options()
         .read(true)
         .write(false)
-        .open(read_console_path)?;
+        .open(READ_CONSOLE_PATH)?;
 
         let write_console = File::options()
         .read(false)
         .write(true)
-        .open(write_console_path)?;
+        .open(WRITE_CONSOLE_PATH)?;
 
-        let mut host_bridge = HostBridge {
+        let host_bridge = HostBridge {
             read_console: read_console,
             write_console: write_console
         };
         
-        host_bridge.message_host(Message::new_hello_host()?)?;
         Ok(host_bridge)
     }
 

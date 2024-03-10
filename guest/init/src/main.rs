@@ -1,11 +1,10 @@
-mod info;
+mod machine_manager;
 mod host_bridge;
 
 use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
-use crate::info::machine::is_machine_initializated;
-use crate::host_bridge::HostBridge;
+use crate::machine_manager::{is_machine_initializated, poweroff, reboot};
 
 #[cfg(not(debug_assertions))]
 use std::process;
@@ -14,18 +13,25 @@ use std::process;
 fn main() {
     let args: Vec<String> = env::args().collect();
     
+    if args[0].contains("reboot") {
+        reboot().unwrap();
+        exit(0);
+    }
+    if args[0].contains("poweroff") || args[0].contains("shutdown") {
+        poweroff().unwrap();
+        exit(0);
+    }
+    
     #[cfg(not(debug_assertions))]
     if process::id() != 1 {
         eprintln!("{}: must be run as PID 1", args[0]);
         exit(1);
     }
-    
+
     if args.len() < 2 {
         eprintln!("usage: {} [target init system]", args[0]);
         exit(1);
     }
-    _ = HostBridge::new("/dev/hvc1", "/dev/hvc0").unwrap();
-
     if is_machine_initializated() {
         println!("Machine is initializated!");
     } else {
