@@ -29,16 +29,6 @@ pub struct Message {
     pub mtype: MessageType
 }
 
-impl Message {
-    pub fn new_reboot() -> Result<Self, Box<dyn Error>> {
-        Ok(
-            Message{
-                mtype: MessageType::Reboot
-            }
-        )
-    }
-}
-
 impl HostBridge {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let read_console = File::options()
