@@ -9,36 +9,36 @@ use crate::host_bridge::*;
 const CONFIG_PATH: &str = "/etc/vs.json";
 
 pub fn is_machine_initializated() -> bool {
-    let config = File::options()
+    let config = match File::options()
         .write(false)
         .append(false)
         .read(true)
-        .open(CONFIG_PATH);
-    
-    if config.is_err(){
-        let err = config.unwrap_err();
-        if err.kind() != ErrorKind::NotFound {
-            eprintln!("Failed to open: {}: {}", CONFIG_PATH, err.to_string());
+        .open(CONFIG_PATH) {
+            Ok(f) => f,
+            Err(err) => {
+                if err.kind() != ErrorKind::NotFound {
+                    eprintln!("Failed to open: {}: {:?}", CONFIG_PATH, err);
+                }
+                return false;
+            }
+    };
+
+    let config_json: Value = match serde_json::from_reader(config) {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("Failed to parse {}: {:?}", CONFIG_PATH, err);
+            return false;
         }
-        return false;
-    }
+    };
 
-    let config = config.unwrap();
-    
-    let v = serde_json::from_reader(config);
-    if v.is_err() {
-        eprintln!("Failed to parse {}: {}", CONFIG_PATH, v.unwrap_err().to_string());
-        return false;
+    match config_json["initializated"].as_bool() {
+        Some(b) => b,
+        None => {
+            eprintln!("Failed to parse {CONFIG_PATH}: {}",
+                "Field \"initializated\" eiher isn't a boolean or it doesn't exist.");
+            false
+        }
     }
-    let v: Value = v.unwrap();
-
-    let is_initializated = &v["initializated"];
-    if is_initializated.is_boolean() == false {
-        eprintln!("Failed to parse {}: {}", CONFIG_PATH, "Field \"initializated\" is not a boolean.");
-        return false;
-    }
-
-    is_initializated.as_bool().unwrap()
 }
 
 pub fn poweroff() -> Result<(), Box<dyn Error>> {
