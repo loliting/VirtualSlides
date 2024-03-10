@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::ErrorKind;
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
+use nix::unistd::sync;
 use serde_json::Value;
 use crate::host_bridge::*;
 
@@ -9,7 +10,8 @@ const CONFIG_PATH: &str = "/etc/vs.json";
 
 pub fn is_machine_initializated() -> bool {
     let config = File::options()
-        .write(true)
+        .write(false)
+        .append(false)
         .read(true)
         .open(CONFIG_PATH);
     
@@ -40,13 +42,15 @@ pub fn is_machine_initializated() -> bool {
 }
 
 pub fn poweroff() -> Result<(), Box<dyn Error>> {
+    sync();
     nix_reboot(RebootMode::RB_AUTOBOOT)?;
     Ok(())
 }
 
 pub fn reboot() -> Result<(), Box<dyn Error>> {
     let mut hb = HostBridge::new()?;
-    hb.message_host(Message::new_reboot()?)?;
+    hb.message_host(Message { mtype: MessageType::Reboot })?;
+    sync();
     nix_reboot(RebootMode::RB_AUTOBOOT)?;
     Ok(())
 }
