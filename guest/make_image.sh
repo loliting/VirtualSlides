@@ -35,8 +35,11 @@ on_error "Init sys build failed."
 
 popd >> /dev/null
 
+cp -rf ./init/target/x86_64-unknown-linux-musl/release/guest-init ./Dockerfiles/$VS_DIST/vs_init
+on_error "Failed to copy vs_init to Dockerfile root"
+
 # Build .tar fs from specified Dockerfile 
-docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" -f ./Dockerfiles/$VS_DIST.Dockerfile .
+docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST
 on_error "Docker build failed."
 
 # Make .qcow2 image from .tar fs 

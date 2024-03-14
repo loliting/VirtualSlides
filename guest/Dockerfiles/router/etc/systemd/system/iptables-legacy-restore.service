@@ -1,0 +1,9 @@
+[Unit]
+Description=Load iptables
+
+[Service]
+User=root
+ExecStart=sh -c 'cat /etc/iptables/rules.v4 | iptables-legacy-restore'
+
+[Install]
+WantedBy=multi-user.target

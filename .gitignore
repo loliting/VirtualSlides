@@ -4,6 +4,7 @@
 /guest/*.qcow2
 /guest/*.tar
 /build
+/guest/Dockerfiles/*/vs_init
 
 # Rust
 /guest/init/target/
