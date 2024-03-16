@@ -4,13 +4,14 @@ mod host_bridge;
 use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
+use anyhow::Result;
 use crate::machine_manager::{is_machine_initializated, poweroff, reboot};
 
 #[cfg(not(debug_assertions))]
 use std::process;
 
 
-fn main() {
+fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     
     if args[0].contains("reboot") {
@@ -27,11 +28,11 @@ fn main() {
         eprintln!("{}: must be run as PID 1", args[0]);
         exit(1);
     }
-
     if args.len() < 2 {
         eprintln!("usage: {} [target init system]", args[0]);
         exit(1);
     }
+
     if is_machine_initializated() {
         println!("Machine is initializated!");
     } else {

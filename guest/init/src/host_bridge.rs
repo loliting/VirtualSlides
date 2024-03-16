@@ -1,11 +1,9 @@
 // Module for talking with the host
 
-use std::error::Error;
-use std::result::Result;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::time::Instant;
-
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 const WRITE_CONSOLE_PATH: &str = "/dev/hvc0";
@@ -20,7 +18,7 @@ pub struct HostBridge {
 #[derive(Serialize, Deserialize)]
 pub enum MessageType {
     #[serde(rename = "reboot")] 
-    Reboot
+    Reboot,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -29,8 +27,22 @@ pub struct Message {
     pub mtype: MessageType
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+enum Status {
+    #[serde(rename = "ok")] 
+    Ok,
+    #[serde(rename = "err")] 
+    Err
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct StatusResponse {
+    status: Status,
+    error: Option<String>
+}
+
 impl HostBridge {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self> {
         let read_console = File::options()
         .read(true)
         .write(false)
@@ -49,7 +61,7 @@ impl HostBridge {
         Ok(host_bridge)
     }
 
-    fn write(&mut self, msg: Message) -> Result<(), Box<dyn std::error::Error>>  {
+    fn write(&mut self, msg: Message) -> Result<()>  {
         let mut message = String::new();
         message.push_str(&serde_json::to_string(&msg)?);
         message.push('\n'); // We use '\n' as msg separator, because it also flushes the buffor
@@ -59,8 +71,8 @@ impl HostBridge {
         Ok(())
     }
     
-    fn read(&mut self) -> Result<(), Box<dyn std::error::Error>>  {
-        let mut read_u8 = || -> Result<u8, Box<dyn std::error::Error>> {
+    fn read(&mut self) -> Result<()>  {
+        let mut read_u8 = || -> Result<u8> {
             let mut buf: [u8;1] = [0];
             self.read_console.read(&mut buf)?;
             Ok(buf[0])
@@ -73,16 +85,21 @@ impl HostBridge {
             buf.push(c);
             c = read_u8()?;
         }
+
+        let status: StatusResponse = serde_json::from_slice(&buf)?;
+        if status.status == Status::Err {
+            return Err(anyhow!(status.error.unwrap_or_default()));
+        }
+
         if buf.len() <= 256{
             println!("buf: {}", String::from_utf8(buf.clone()).unwrap());
-
         }
         let elapsed = now.elapsed();
         println!("Read {} bytes in: {:.2?}", buf.len(), elapsed);
         Ok(())
     }
 
-    pub fn message_host(&mut self, msg: Message) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn message_host(&mut self, msg: Message) -> Result<()> {
         self.write(msg)?;
         self.read()?;
         Ok(())
