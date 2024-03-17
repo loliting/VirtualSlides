@@ -30,16 +30,24 @@ fi
 pushd ./init >> /dev/null
 
 # Build our init system
-CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl --release
+if [ -z $DEBUG ]; then
+    CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl --release
+else
+    CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl
+fi
 on_error "Init sys build failed."
 
 popd >> /dev/null
 
-cp -rf ./init/target/x86_64-unknown-linux-musl/release/guest-init ./Dockerfiles/$VS_DIST/vs_init
+cp -rf ./init/target/x86_64-unknown-linux-musl/debug/guest-init ./Dockerfiles/$VS_DIST/vs_init
 on_error "Failed to copy vs_init to Dockerfile root"
 
 # Build .tar fs from specified Dockerfile 
-docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST
+if [ $DEBUG -eq 1 ]; then
+    docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST --build-arg DEBUG=1
+else
+    docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST
+fi
 on_error "Docker build failed."
 
 # Make .qcow2 image from .tar fs 
