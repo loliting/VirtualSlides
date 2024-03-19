@@ -7,6 +7,7 @@ class GuestBridge;
 
 #include "VirtualMachine.hpp"
 
+#include "third-party/nlohmann/json.hpp"
 
 class GuestBridge : public QObject {
     Q_OBJECT
@@ -19,7 +20,7 @@ private:
         Err
     };
     void parseRequest(QString request);
-    void sendStatusResponse(ResponseStatus status, QString errStr = "");
+    nlohmann::json statusResponse(ResponseStatus status, std::string errStr = "");
 private slots:
     void handleVmSockReadReady();
 private:

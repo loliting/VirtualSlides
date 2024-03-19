@@ -2,9 +2,8 @@
 
 #include <QtWidgets/QMessageBox>
 
-#include "third-party/nlohmann/json.hpp"
-
 using namespace nlohmann;
+
 
 GuestBridge::GuestBridge(VirtualMachine* vm) {
     m_vm = vm;
@@ -15,11 +14,13 @@ GuestBridge::GuestBridge(VirtualMachine* vm) {
 
 void GuestBridge::parseRequest(QString request) {
     std::string requestType;
+    json response;
     try{
         json jsonRequest = json::parse(request.toStdString());
         requestType = jsonRequest["type"];
     }
     catch(std::exception &e){
+        response.update(statusResponse(ResponseStatus::Err, e.what()));
         QMessageBox msgBox(QMessageBox::Critical,
             "Virtual Slides",
             "Communication with virtual machine failed:\n" + QString(e.what()),
@@ -27,35 +28,45 @@ void GuestBridge::parseRequest(QString request) {
         msgBox.exec();
     }
 
-    if(requestType == "reboot"){
+    if (requestType.empty()){ }
+    else if(requestType == "reboot"){
         m_vm->m_shouldRestart = true;
-        sendStatusResponse(ResponseStatus::Ok);
+        response.update(statusResponse(ResponseStatus::Ok));
     }
+    else if(requestType == "download-test") {
+        response["download-test"] = std::string(1000 * 1000, 'a');
+        response.update(statusResponse(ResponseStatus::Ok));
+    }
+    else {
+        std::string err = "Unknown request type: \"" + requestType + "\"";
+        response.update(statusResponse(ResponseStatus::Err, err));
+    }
+
+    std::string jsonResponseStr = response.dump();
+    m_vm->m_vmWriteSocket->write(QByteArray::fromStdString(jsonResponseStr) + "\x1e\n");
+    m_vm->m_vmWriteSocket->flush();
 }
 
 void GuestBridge::handleVmSockReadReady() {
     requestStr += m_vm->m_vmReadSocket->readAll();
-    while(requestStr.contains("\n") != false){
+    while(requestStr.contains("\x1e") != false){
         QString request = requestStr;
-        request.truncate(requestStr.indexOf('\n') + 1);
-        qDebug() << request;
+        request.truncate(requestStr.indexOf("\x1e"));
         parseRequest(request);
-        requestStr.remove(0, request.length());
+        requestStr.remove(0, request.length() + 1);
     }
 }
 
-void GuestBridge::sendStatusResponse(ResponseStatus status, QString errStr) {
-    json jsonResponse;
+json GuestBridge::statusResponse(ResponseStatus status, std::string errStr) {
+    json response;
     switch(status) {
     case ResponseStatus::Ok:
-        jsonResponse["status"] = "ok";
+        response["status"] = "ok";
         break;
     case ResponseStatus::Err:
-        jsonResponse["status"] = "err";
-        jsonResponse["error"] = errStr.toStdString();
+        response["status"] = "err";
+        response["error"] = errStr;
         break;
     }
-    std::string jsonResponseStr = jsonResponse.dump() + "\n";
-    m_vm->m_vmWriteSocket->write(jsonResponseStr.c_str(), jsonResponseStr.length());
-    m_vm->m_vmWriteSocket->flush();
+    return response;
 }
