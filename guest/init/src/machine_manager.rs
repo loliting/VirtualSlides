@@ -50,7 +50,7 @@ pub fn poweroff() -> Result<()> {
 
 pub fn reboot() -> Result<()> {
     let mut hb = HostBridge::new()?;
-    hb.message_host(Message { mtype: MessageType::Reboot })?;
+    hb.message_host(Message::from_message_type(MessageType::Reboot))?;
     sync();
     nix_reboot(RebootMode::RB_AUTOBOOT)?;
     Ok(())

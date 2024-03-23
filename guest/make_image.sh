@@ -30,24 +30,23 @@ fi
 pushd ./init >> /dev/null
 
 # Build our init system
-if [ -z $DEBUG ]; then
-    CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl --release
+if [[ $DEBUG -eq 1 ]]; then
+    RELEASE_FLAG=""
+    TARGET_NAME="debug"
 else
-    CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl
+    RELEASE_FLAG="--release"
+    TARGET_NAME="release"
 fi
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --target x86_64-unknown-linux-musl $RELEASE_FLAG $CROSS_CONTAINER_OPTS 
 on_error "Init sys build failed."
 
 popd >> /dev/null
 
-cp -rf ./init/target/x86_64-unknown-linux-musl/debug/guest-init ./Dockerfiles/$VS_DIST/vs_init
-on_error "Failed to copy vs_init to Dockerfile root"
+cp -rf ./init/target/x86_64-unknown-linux-musl/$TARGET_NAME/guest-init ./Dockerfiles/$VS_DIST/vs_init
+on_error "Failed to copy vs_init to Dockerfile's dir"
 
 # Build .tar fs from specified Dockerfile 
-if [ $DEBUG -eq 1 ]; then
-    docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST --build-arg DEBUG=1
-else
-    docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST
-fi
+docker build --platform linux/amd64 --output "type=tar,dest=$VS_DIST.tar" ./Dockerfiles/$VS_DIST --build-arg "DEBUG=$DEBUG"
 on_error "Docker build failed."
 
 # Make .qcow2 image from .tar fs 

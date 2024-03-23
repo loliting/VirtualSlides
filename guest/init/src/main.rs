@@ -10,16 +10,25 @@ use crate::machine_manager::{is_machine_initializated, poweroff, reboot};
 #[cfg(not(debug_assertions))]
 use std::process;
 
+#[cfg(debug_assertions)]
+use crate::host_bridge::{HostBridge, Message, MessageType};
+
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     
     if args[0].contains("reboot") {
-        reboot().unwrap();
+        reboot()?;
         exit(0);
     }
     if args[0].contains("poweroff") || args[0].contains("shutdown") {
-        poweroff().unwrap();
+        poweroff()?;
+        exit(0);
+    }
+    #[cfg(debug_assertions)]
+    if args[0].contains("vs_test") {
+        let mut bridge = HostBridge::new()?; 
+        bridge.message_host(Message::from_message_type(MessageType::DownloadTest))?;
         exit(0);
     }
     

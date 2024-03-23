@@ -1,8 +1,8 @@
 // Module for talking with the host
 
 use std::fs::File;
-use std::io::{Read, Write};
-use std::time::Instant;
+use std::io::{BufRead, BufReader, Write};
+use std::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
@@ -19,12 +19,22 @@ pub struct HostBridge {
 pub enum MessageType {
     #[serde(rename = "reboot")] 
     Reboot,
+    #[serde(rename = "download-test")] 
+    DownloadTest,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
     #[serde(rename = "type")] 
-    pub mtype: MessageType
+    pub mtype: MessageType,
+}
+
+impl Message {
+    pub fn from_message_type(t: MessageType) -> Self {
+        Message {
+            mtype: t
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -64,27 +74,20 @@ impl HostBridge {
     fn write(&mut self, msg: Message) -> Result<()>  {
         let mut message = String::new();
         message.push_str(&serde_json::to_string(&msg)?);
-        message.push('\n'); // We use '\n' as msg separator, because it also flushes the buffor
+        message.push_str("\x1e\n");
         
         self.write_console.write(message.as_bytes())?;
         
         Ok(())
     }
     
-    fn read(&mut self) -> Result<()>  {
-        let mut read_u8 = || -> Result<u8> {
-            let mut buf: [u8;1] = [0];
-            self.read_console.read(&mut buf)?;
-            Ok(buf[0])
-        };
+    fn read(&mut self) -> Result<()> {
+        let mut reader = BufReader::new(&self.read_console);
         let now = Instant::now();
 
         let mut buf: Vec<u8> = Vec::new();
-        let mut c: u8 = read_u8()?;
-        while c != b'\n' {
-            buf.push(c);
-            c = read_u8()?;
-        }
+        reader.read_until(b'\x1e', &mut buf)?;
+        buf.pop();
 
         let status: StatusResponse = serde_json::from_slice(&buf)?;
         if status.status == Status::Err {
@@ -92,7 +95,7 @@ impl HostBridge {
         }
 
         if buf.len() <= 256{
-            println!("buf: {}", String::from_utf8(buf.clone()).unwrap());
+            println!("buf: {:?}", String::from_utf8(buf.to_vec())?);
         }
         let elapsed = now.elapsed();
         println!("Read {} bytes in: {:.2?}", buf.len(), elapsed);

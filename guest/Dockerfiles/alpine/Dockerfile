@@ -1,5 +1,7 @@
 FROM alpine:latest
 
+ARG DEBUG
+
 RUN apk update && apk add \
     openrc \
     agetty \
@@ -13,3 +15,5 @@ COPY vs_init /sbin/vs_init
 RUN ln -sf /sbin/vs_init /sbin/reboot
 RUN ln -sf /sbin/vs_init /sbin/poweroff
 RUN ln -sf /sbin/vs_init /sbin/shutdown
+
+RUN if [[ $DEBUG -eq 1 ]] ; then ln -sf /sbin/vs_init /sbin/vs_test ; fi
