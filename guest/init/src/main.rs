@@ -5,14 +5,13 @@ use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
 use anyhow::Result;
-use crate::machine_manager::{is_machine_initializated, poweroff, reboot};
+use crate::machine_manager::*;
 
 #[cfg(not(debug_assertions))]
 use std::process;
 
 #[cfg(debug_assertions)]
-use crate::host_bridge::{HostBridge, Message, MessageType};
-
+use crate::host_bridge::{HostBridge, RequestType};
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -25,10 +24,12 @@ fn main() -> Result<()> {
         poweroff()?;
         exit(0);
     }
+    
+    
     #[cfg(debug_assertions)]
     if args[0].contains("vs_test") {
-        let mut bridge = HostBridge::new()?; 
-        bridge.message_host(Message::from_message_type(MessageType::DownloadTest))?;
+        let mut bridge = HostBridge::new()?;
+        bridge.message_host(RequestType::DownloadTest)?;
         exit(0);
     }
     
@@ -44,8 +45,13 @@ fn main() -> Result<()> {
 
     if is_machine_initializated() {
         println!("Machine is initializated!");
+        set_hostname()?;
     } else {
         println!("Machine is not initializated!");
+        
+        query_and_set_hostname()?;
+
+        set_machine_initializated(true)?;
     }
 
 

@@ -6,5 +6,5 @@ edition = "2021"
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-nix = { version = "*", features = ["reboot", "fs"] }
+nix = { version = "*", features = ["reboot", "fs", "hostname"] }
 anyhow = "1.0"

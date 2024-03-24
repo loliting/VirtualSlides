@@ -37,6 +37,10 @@ void GuestBridge::parseRequest(QString request) {
         response["download-test"] = std::string(1000 * 1000, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
+    else if(requestType == "hostname") {
+        response["hostname"] = m_vm->m_hostname.toStdString();
+        response.update(statusResponse(ResponseStatus::Ok));
+    } 
     else {
         std::string err = "Unknown request type: \"" + requestType + "\"";
         response.update(statusResponse(ResponseStatus::Err, err));

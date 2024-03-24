@@ -2,13 +2,12 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 const WRITE_CONSOLE_PATH: &str = "/dev/hvc0";
 const READ_CONSOLE_PATH: &str = "/dev/hvc1";
-
 
 pub struct HostBridge {
     read_console: File,
@@ -16,28 +15,16 @@ pub struct HostBridge {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum MessageType {
+pub enum RequestType {
     #[serde(rename = "reboot")] 
     Reboot,
     #[serde(rename = "download-test")] 
     DownloadTest,
+    #[serde(rename = "hostname")] 
+    Hostname,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Message {
-    #[serde(rename = "type")] 
-    pub mtype: MessageType,
-}
-
-impl Message {
-    pub fn from_message_type(t: MessageType) -> Self {
-        Message {
-            mtype: t
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 enum Status {
     #[serde(rename = "ok")] 
     Ok,
@@ -45,10 +32,12 @@ enum Status {
     Err
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct StatusResponse {
-    status: Status,
-    error: Option<String>
+#[derive(Serialize, Deserialize)]
+pub struct Response {
+    pub(in self) status: Status,
+    pub(in self) error: Option<String>,
+
+    pub hostname: Option<String>,
 }
 
 impl HostBridge {
@@ -71,9 +60,8 @@ impl HostBridge {
         Ok(host_bridge)
     }
 
-    fn write(&mut self, msg: Message) -> Result<()>  {
-        let mut message = String::new();
-        message.push_str(&serde_json::to_string(&msg)?);
+    fn write(&mut self, request: RequestType) -> Result<()>  {
+        let mut message = serde_json::json!({"type": request}).to_string();
         message.push_str("\x1e\n");
         
         self.write_console.write(message.as_bytes())?;
@@ -81,7 +69,7 @@ impl HostBridge {
         Ok(())
     }
     
-    fn read(&mut self) -> Result<()> {
+    fn read(&mut self) -> Result<Response> {
         let mut reader = BufReader::new(&self.read_console);
         let now = Instant::now();
 
@@ -89,9 +77,9 @@ impl HostBridge {
         reader.read_until(b'\x1e', &mut buf)?;
         buf.pop();
 
-        let status: StatusResponse = serde_json::from_slice(&buf)?;
-        if status.status == Status::Err {
-            return Err(anyhow!(status.error.unwrap_or_default()));
+        let response: Response = serde_json::from_slice(&buf)?;
+        if response.status == Status::Err {
+            return Err(anyhow!(response.error.unwrap_or_default()));
         }
 
         if buf.len() <= 256{
@@ -99,13 +87,13 @@ impl HostBridge {
         }
         let elapsed = now.elapsed();
         println!("Read {} bytes in: {:.2?}", buf.len(), elapsed);
-        Ok(())
+        
+        Ok(response)
     }
 
-    pub fn message_host(&mut self, msg: Message) -> Result<()> {
-        self.write(msg)?;
-        self.read()?;
-        Ok(())
+    pub fn message_host(&mut self, request: RequestType) -> Result<Response> {
+        self.write(request)?;
+        Ok(self.read()?)
     }
 
 }
