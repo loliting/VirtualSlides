@@ -219,6 +219,9 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
         }
     }
 
+    if(m_hostname.isEmpty())
+        m_hostname = m_id;
+    
     createImageFile();
 }
 
@@ -230,7 +233,8 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bo
     m_dhcpServer = dhcpServer;
     m_image = image;
     m_macAddress = m_net->generateNewMacAddress();
-
+    m_hostname = m_id;
+    
     createImageFile();
 }
 
