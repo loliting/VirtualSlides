@@ -2,6 +2,7 @@
 #define APPLICATION_HPP
 
 #include <QApplication>
+#include <QtCore/QSharedMemory>
 
 #include "PresentationWindow.hpp"
 
@@ -21,6 +22,8 @@ private:
     ~Application() override { }
 
     static Application *m_instance;
+    /* Used to achieve single app instance at max */
+    static QSharedMemory *m_sharedMem;
 };
 
 #endif // APPLICATION_HPP

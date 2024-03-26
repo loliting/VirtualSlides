@@ -7,6 +7,7 @@
 #include "Config.hpp"
 
 Application* Application::m_instance = nullptr;
+QSharedMemory* Application::m_sharedMem = nullptr;
 
 Application* Application::Instance() {
     assert(m_instance != nullptr);
@@ -27,13 +28,35 @@ Application* Application::Instance(int &argc, char* argv[]) {
         m_instance = nullptr;
         return nullptr;
     }
+
+    m_sharedMem = new QSharedMemory("virtual-slides.pid");
+    if(m_sharedMem->attach(QSharedMemory::ReadOnly) || !m_sharedMem->create(1)) {
+        m_sharedMem->detach();
+        QMessageBox msgBox(
+            QMessageBox::Critical,
+            "Virtual Slides",
+            "Failed to acquire lock on virtual-slides.pid\n\nIs another instance running?",
+            QMessageBox::Ok
+        );
+        msgBox.exec();
+
+        delete m_instance;
+        delete m_sharedMem;
+        m_instance = nullptr;
+        m_sharedMem = nullptr;
+        return nullptr;
+    }
+
     return m_instance;
 }
 
 void Application::CleanUp() {
     Config::CleanUp();
     delete m_instance;
+    m_sharedMem->detach();
+    delete m_sharedMem;
     m_instance = nullptr;
+    m_sharedMem = nullptr;
 }
 
 PresentationWindow* Application::addWindow(QString presentationPath){
