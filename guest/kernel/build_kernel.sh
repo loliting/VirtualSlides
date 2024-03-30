@@ -11,8 +11,8 @@ on_error () {
 
 pushd $(dirname $(readlink -f $0)) >> /dev/null
 
-# Linux 6.7.8 is the lastest stable release as of 05.03.2024
-LINUX_VER="${VS_LINUX_VER:-"6.7.8"}"
+# Linux 6.7.8 is the lastest stable release as of 30.03.2024
+LINUX_VER="${VS_LINUX_VER:-"6.8.2"}"
 KERNEL_URL=https://cdn.kernel.org/pub/linux/kernel/v$(echo $LINUX_VER | head -c 1).x/linux-$LINUX_VER.tar.xz
 
 
@@ -37,7 +37,7 @@ on_error "Failed to change kernel's tty buffor size define in source code"
 make olddefconfig
 on_error 'Kernel config build failed'
 
-make -j1$(nproc)
+make -j1$(nproc) LOCALVERSION=-virtual-slides
 on_error 'Kernel build failed'
 
 cp -f ./arch/x86/boot/bzImage ..
