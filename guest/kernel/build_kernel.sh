@@ -37,7 +37,7 @@ on_error "Failed to change kernel's tty buffor size define in source code"
 make olddefconfig
 on_error 'Kernel config build failed'
 
-make -j1$(nproc) LOCALVERSION=-virtual-slides
+make -j1$(nproc)
 on_error 'Kernel build failed'
 
 cp -f ./arch/x86/boot/bzImage ..
