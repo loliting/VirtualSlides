@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
+use nix::mount::{mount, MsFlags};
 use serde_json::Value;
 use anyhow::Result;
 
@@ -93,4 +94,23 @@ pub fn query_and_set_hostname() -> Result<()> {
     }
 
     set_hostname()
+}
+
+pub fn mount_sys_dirs() -> Result<()> {
+    std::fs::create_dir_all("/proc")?;
+    mount::<str, str, str, str>(None, "/proc", Some("proc"), MsFlags::empty(), None)?;
+    
+    std::fs::create_dir_all("/dev/pts")?;
+    mount::<str, str, str, str>(None, "/dev/pts", Some("devpts"), MsFlags::empty(), None)?;
+    
+    std::fs::create_dir_all("/dev/mqueue")?;
+    mount::<str, str, str, str>(None, "/dev/mqueue", Some("mqueue"), MsFlags::empty(), None)?;
+    
+    std::fs::create_dir_all("/dev/shm")?;
+    mount::<str, str, str, str>(None, "/dev/shm", Some("tmpfs"), MsFlags::empty(), None)?;
+    
+    std::fs::create_dir_all("/sys")?;
+    mount::<str, str, str, str>(None, "/sys", Some("sysfs"), MsFlags::empty(), None)?;
+    
+    Ok(())
 }

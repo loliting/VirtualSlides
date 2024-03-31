@@ -49,6 +49,7 @@ fn main() -> Result<()> {
     } else {
         println!("Machine is not initializated!");
         
+        mount_sys_dirs()?;
         query_and_set_hostname()?;
 
         set_machine_initializated(true)?;
