@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY etc /etc
 
-RUN systemctl enable iptables-legacy-restore
+RUN systemctl enable iptables-restore
 RUN systemctl enable ifupdown-wait-online.service
 RUN systemctl enable kea-dhcp4-server
 
