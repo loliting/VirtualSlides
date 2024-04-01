@@ -7,9 +7,16 @@ RUN apk update && apk add \
     agetty \
     ifupdown-ng \
     bash \
-    file
+    file \
+    eudev \
+    udev-init-scripts
 
 COPY etc /etc
+
+RUN rc-update add udev sysinit
+RUN rc-update add udev-trigger sysinit
+RUN rc-update add udev-settle sysinit
+RUN rc-update add udev-postmount default
 
 COPY vs_init /sbin/vs_init
 RUN ln -sf /sbin/vs_init /sbin/reboot
