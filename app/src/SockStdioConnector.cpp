@@ -6,6 +6,11 @@
 
 SockStdioConnectorApp* SockStdioConnectorApp::m_instance = nullptr;
 
+#define IS_UTF8_2_CHAR(c) ((c) & '\xE0') == '\xC0' // UTF8-2 - 110xxxxx
+#define IS_UTF8_3_CHAR(c) ((c) & '\xF0') == '\xE0' // UTF8-3 - 1110xxxx
+#define IS_UTF8_4_CHAR(c) ((c) & '\xF8') == '\xF0' // UTF8-4 - 11110xxx
+
+
 int main(int argc, char* argv[]) {
     struct termios term;
     tcgetattr(fileno(stdin), &term);
@@ -67,7 +72,25 @@ void SockStdioConnectorApp::writeToSockImpl(char c){
 
 void SockStdioConnectorApp::readSock(){
     QTextStream out(stdout);
-    out << m_socket->readAll();
+    while(m_instance->m_socket->bytesAvailable()){
+        m_instance->charBuffor += m_socket->read(1);
+
+        if(m_instance->expectedCharSize == 0);
+        else if(IS_UTF8_2_CHAR(m_instance->charBuffor[0]))
+            m_instance->expectedCharSize = 2;
+        else if(IS_UTF8_3_CHAR(m_instance->charBuffor[0]))
+            m_instance->expectedCharSize = 3;
+        else if(IS_UTF8_4_CHAR(m_instance->charBuffor[0]))
+            m_instance->expectedCharSize = 4;
+        else
+            m_instance->expectedCharSize = 1;
+
+        if(m_instance->charBuffor.size() >= m_instance->expectedCharSize){
+            out << m_instance->charBuffor;
+            m_instance->charBuffor.clear();
+            m_instance->expectedCharSize = 0;
+        }
+    }
 }
 
 void SockStdioConnectorApp::printSocketError(QLocalSocket::LocalSocketError e) {

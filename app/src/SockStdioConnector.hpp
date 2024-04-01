@@ -26,5 +26,6 @@ private:
 
     QString m_socketName;
     QLocalSocket* m_socket = new QLocalSocket();
-
+    uint8_t expectedCharSize = 0;
+    QByteArray charBuffor;
 };
