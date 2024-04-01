@@ -75,7 +75,7 @@ void SockStdioConnectorApp::readSock(){
     while(m_instance->m_socket->bytesAvailable()){
         m_instance->charBuffor += m_socket->read(1);
 
-        if(m_instance->expectedCharSize == 0);
+        if(m_instance->expectedCharSize);
         else if(IS_UTF8_2_CHAR(m_instance->charBuffor[0]))
             m_instance->expectedCharSize = 2;
         else if(IS_UTF8_3_CHAR(m_instance->charBuffor[0]))
