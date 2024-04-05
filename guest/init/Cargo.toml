@@ -8,3 +8,4 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 nix = { version = "*", features = ["reboot", "fs", "hostname", "mount"] }
 anyhow = "1.0"
+indicatif = "0.17"

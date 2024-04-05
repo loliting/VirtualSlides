@@ -1,10 +1,12 @@
 // Module for talking with the host
 
+use std::cmp::max;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
+use indicatif::{HumanBytes, ProgressBar};
 
 const WRITE_CONSOLE_PATH: &str = "/dev/hvc0";
 const READ_CONSOLE_PATH: &str = "/dev/hvc1";
@@ -72,22 +74,27 @@ impl HostBridge {
     fn read(&mut self) -> Result<Response> {
         let mut reader = BufReader::new(&self.read_console);
         let now = Instant::now();
+        let progress_bar = ProgressBar::new_spinner();
+        progress_bar.enable_steady_tick(Duration::from_millis(150));
 
         let mut buf: Vec<u8> = Vec::new();
         reader.read_until(b'\x1e', &mut buf)?;
+        progress_bar.finish();
         buf.pop();
 
         let response: Response = serde_json::from_slice(&buf)?;
         if response.status == Status::Err {
             return Err(anyhow!(response.error.unwrap_or_default()));
         }
-
         if buf.len() <= 256{
             println!("buf: {:?}", String::from_utf8(buf.to_vec())?);
         }
-        let elapsed = now.elapsed();
-        println!("Read {} bytes in: {:.2?}", buf.len(), elapsed);
-        
+
+        let bytes_recived: u64 = buf.len().try_into().unwrap();
+        let speed = bytes_recived / max(1, now.elapsed().as_secs());
+
+        println!("\nRead {} in: {:.2?} ({}/s)", HumanBytes(bytes_recived), now.elapsed(), HumanBytes(speed));
+
         Ok(response)
     }
 
