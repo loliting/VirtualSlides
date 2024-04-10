@@ -6,9 +6,10 @@ edition = "2021"
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-nix = { version = "*", features = ["reboot", "fs", "hostname", "mount", "socket", "ioctl"] }
+nix = { version = "*", features = ["reboot", "fs", "hostname", "mount"] }
 anyhow = "1.0"
 indicatif = "0.17"
+vsock = "0.5.0"
 
 [features]
 default = ["legacy-host-bridge"]
