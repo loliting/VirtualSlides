@@ -1,15 +1,15 @@
 // Module for talking with the host
 
 #[cfg(not(feature = "legacy-host-bridge"))]
-mod host_bridge_imp;
+mod host_bridge_impl;
 #[cfg(not(feature = "legacy-host-bridge"))]
-pub use host_bridge_imp::HostBridge;
+pub use host_bridge_impl::HostBridge;
 
 
 #[cfg(feature = "legacy-host-bridge")]
-mod legacy_host_bridge_imp;
+mod legacy_host_bridge_impl;
 #[cfg(feature = "legacy-host-bridge")]
-pub use legacy_host_bridge_imp::HostBridge;
+pub use legacy_host_bridge_impl::HostBridge;
 
 use std::cmp::max;
 use std::time::{Duration, Instant};
