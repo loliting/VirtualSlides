@@ -280,8 +280,8 @@ QStringList VirtualMachine::getArgs(){
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root";
-    if(!m_macAddress.isEmpty() && m_net){
-        ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=224.0.0.69:1234"
+    if(m_net && !m_macAddress.isEmpty()){
+        ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=" VNET_MCAST_ADDR ":" + QString::number(m_net->mcastPort())
             << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
     }
     if(m_hasSlirpNetDev){

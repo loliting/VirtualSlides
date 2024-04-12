@@ -11,6 +11,9 @@ using namespace rapidxml;
 */
 #define SUBNET_REGEX "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}(\\/((\\d)|([1-2]\\d)|30))?$"
 
+static uint32_t portCounter = 3000;
+
+
 static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool defaultValue){
     if(parentNode == nullptr){
         return defaultValue;
@@ -61,6 +64,7 @@ Network::Network(rapidxml::xml_node<char>* networkNode){
 
     m_dhcpServerEnabled = getXmlBoolValue(networkNode, "dhcp-server", true);
     m_Wan = getXmlBoolValue(networkNode, "WAN", true);
+    m_mcastPort = portCounter++;
 }
 
 QString Network::generateNewMacAddress() {

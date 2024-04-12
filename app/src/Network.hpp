@@ -1,6 +1,8 @@
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
 
+#define VNET_MCAST_ADDR "224.0.0.69"
+
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
@@ -31,11 +33,16 @@ public:
     QString generateNewMacAddress();
 
     QString id() const { return m_id; }
+    uint16_t mcastPort() const {return m_mcastPort; }
+
     VirtualMachine* vm() const { return m_vm; }
+    
     bool hasWan() const { return m_Wan; }
     bool hasDhcpServerEnabled() const { return m_dhcpServerEnabled; }
     QString subnet() const { return m_subnet; }
 private:
+    uint16_t m_mcastPort;
+    
     QString m_id;
     QString m_subnet = "10.0.64.0/24";
     QString m_vmId;
