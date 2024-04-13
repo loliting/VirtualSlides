@@ -247,7 +247,6 @@ void VirtualMachine::createImageFile(){
     if(m_imageFile.open() == false){
         throw VirtualMachineException("Could not create temporary file: " + m_imageFile.errorString());
     }
-    m_imageFile.setAutoRemove(false);
     QFile orginalDiskFile(m_diskImage->path);
     if(orginalDiskFile.open(QIODevice::ReadOnly) == false){
         QString exceptionStr = "Could not open disk image \"" + m_diskImage->path + "\": ";
