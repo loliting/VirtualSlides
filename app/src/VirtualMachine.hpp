@@ -72,6 +72,7 @@ class VirtualMachine : public QObject
 public:
     QString id() const { return m_id; }
     Network* net() const { return m_net; }
+    uint32_t cid() const { return m_cid; }
     QString serverName() const { return m_serverName; }
     void setNet(Network* net);
     ~VirtualMachine();
@@ -111,14 +112,8 @@ private:
     QLocalSocket* m_consoleSocket = nullptr;
     QList<QLocalSocket*> m_terminalSockets;
 
-    /* Server for host-guest communication */
-    QLocalServer* m_vmServer = nullptr;
-    /* Read socket for host-guest communication */
-    QLocalSocket* m_vmReadSocket = nullptr;
-    /* Write socket for host-guest communication */
-    QLocalSocket* m_vmWriteSocket = nullptr;
-
     GuestBridge* m_guestBridge = nullptr;
+    uint32_t m_cid;
 signals:
     void networkChanged();
     void vmStarted();
@@ -128,8 +123,6 @@ private slots:
     void handleNewConsoleSocketConnection();
     void handleConsoleSockReadReady();
     void handleClientConsoleSockReadReady(QLocalSocket* sock);
-    
-    void handleNewVmSocketConnection();
     
     void handleVmProcessFinished(int);
 public slots:

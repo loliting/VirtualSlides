@@ -12,6 +12,8 @@
 
 using namespace rapidxml;
 
+static uint32_t cidCounter = 1000 * 1000;
+
 #define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw selinux=0 init=/sbin/vs_init "
 #define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
 #define KERNEL_EARLYPRINTK_CMD "earlyprintk=ttyS0 " KERNEL_DEFAULT_CMD
@@ -222,10 +224,12 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     if(m_hostname.isEmpty())
         m_hostname = m_id;
     
+    m_cid = cidCounter++;
     createImageFile();
 }
 
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
+    m_cid = cidCounter++;
     m_id = id;
     m_net = net;
     m_netId = net->id();
@@ -271,14 +275,11 @@ QStringList VirtualMachine::getArgs(){
         << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-device" << "virtio-serial-device"
-        << "-chardev" << "socket,id=virtiocon0,path=" + m_vmServer->fullServerName()
-        << "-device" << "virtconsole,chardev=virtiocon0"
-        << "-chardev" << "socket,id=virtiocon1,path=" + m_vmServer->fullServerName()
-        << "-device" << "virtconsole,chardev=virtiocon1"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
-        << "-device" << "virtio-blk-device,drive=root";
+        << "-device" << "virtio-blk-device,drive=root"
+        << "-device" << "vhost-vsock-device,guest-cid=" + QString::number(m_cid);
     if(m_net && !m_macAddress.isEmpty()){
         ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=" VNET_MCAST_ADDR ":" + QString::number(m_net->mcastPort())
             << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
@@ -315,19 +316,6 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
     }
 }
 
-void VirtualMachine::handleNewVmSocketConnection() {
-    if(m_vmReadSocket == nullptr){
-        m_vmReadSocket = m_vmServer->nextPendingConnection();
-    }
-    else if(m_vmWriteSocket == nullptr) {
-        m_vmWriteSocket = m_vmServer->nextPendingConnection();
-    }
-
-    if(m_vmReadSocket && m_vmWriteSocket){
-        m_guestBridge = new GuestBridge(this);
-    }
-}
-
 void VirtualMachine::start() {
     if(m_isRunning)
         return;
@@ -336,9 +324,8 @@ void VirtualMachine::start() {
     m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_consoleServer->listen(m_serverName);
     
-    m_vmServer = new QLocalServer();
-    m_vmServer->listen(QUuid::createUuid().toString(QUuid::WithoutBraces));
-    
+    m_guestBridge = new GuestBridge(this);
+
     if(m_consoleServer->isListening() == false) {
         QMessageBox(QMessageBox::Critical,
             "Virtual Slides: VM error",
@@ -351,8 +338,6 @@ void VirtualMachine::start() {
 
     connect(m_consoleServer, SIGNAL(newConnection()),
         this, SLOT(handleNewConsoleSocketConnection(void)));
-    connect(m_vmServer, SIGNAL(newConnection()),
-        this, SLOT(handleNewVmSocketConnection(void)));
 
     m_vmProcess = new QProcess();
 
@@ -375,14 +360,6 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
         m_guestBridge->deleteLater();
     }
     m_guestBridge = nullptr;
-
-    if(m_vmServer){
-        m_vmServer->disconnect();
-        m_vmServer->deleteLater();
-    }
-    m_vmServer = nullptr;
-    m_vmReadSocket = nullptr;
-    m_vmWriteSocket = nullptr;
 
     for (auto termSock : m_terminalSockets) {
         termSock->close();
@@ -445,4 +422,6 @@ void VirtualMachine::handleConsoleSockReadReady() {
 
 VirtualMachine::~VirtualMachine() {
     stop();
+    if(m_guestBridge)
+        m_guestBridge->deleteLater();
 }

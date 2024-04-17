@@ -33,6 +33,10 @@ set(VS_SOURCES
     src/GuestBridge.cpp
     src/VirtualMachineWidget.cpp
     src/VirtualMachineWidget.hpp
+    src/VSock.cpp
+    src/VSock.hpp
+    src/VSockServer.cpp
+    src/VSockServer.hpp
 )
 
 qt5_add_resources(VS_SOURCES Resources/res.qrc)

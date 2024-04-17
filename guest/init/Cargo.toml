@@ -12,5 +12,4 @@ indicatif = "0.17"
 vsock = "0.5.0"
 
 [features]
-default = ["legacy-host-bridge"]
 legacy-host-bridge = []

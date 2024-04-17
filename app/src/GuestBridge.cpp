@@ -5,14 +5,36 @@
 using namespace nlohmann;
 
 
-GuestBridge::GuestBridge(VirtualMachine* vm) {
+GuestBridge::GuestBridge(VirtualMachine* vm) : QObject(vm) {
     m_vm = vm;
 
-    connect(m_vm->m_vmReadSocket, SIGNAL(readyRead()),
-        this, SLOT(handleVmSockReadReady(void)));
+    m_server = new VSockServer(this);
+    if(!m_server->listen(VSockServer::Host, m_vm->m_cid)){
+        qWarning() << "VSockServer failed:" << m_server->errorString();
+        return;
+    }
+
+    connect(m_server, &VSockServer::newConnection, this, [=] {
+        VSock* sock = m_server->nextPendingConnection();
+        connect(sock, &VSock::readyRead, [=] {
+            handleVmSockReadReady(sock);
+        });
+        connect(sock, &VSock::errorOccurred, [=] {
+            qWarning() << "An error occurred on vsock:" << sock->errorString();
+            sock->close();
+            sock->deleteLater();
+        });
+    });
+
 }
 
-void GuestBridge::parseRequest(QString request) {
+GuestBridge::~GuestBridge() {
+    if(m_server){
+        m_server->deleteLater();
+    }
+}
+
+void GuestBridge::parseRequest(VSock* sock, QString request) {
     std::string requestType;
     json response;
     try{
@@ -34,7 +56,7 @@ void GuestBridge::parseRequest(QString request) {
         response.update(statusResponse(ResponseStatus::Ok));
     }
     else if(requestType == "download-test") {
-        response["download-test"] = std::string(1000 * 1000, 'a');
+        response["download-test"] = std::string(1024 * 1024, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
     else if(requestType == "hostname") {
@@ -46,17 +68,24 @@ void GuestBridge::parseRequest(QString request) {
         response.update(statusResponse(ResponseStatus::Err, err));
     }
 
-    std::string jsonResponseStr = response.dump();
-    m_vm->m_vmWriteSocket->write(QByteArray::fromStdString(jsonResponseStr) + "\x1e\n");
-    m_vm->m_vmWriteSocket->flush();
+    QByteArray jsonResponseStr = QByteArray::fromStdString(response.dump()) + "\x1e";
+    sock->write(jsonResponseStr);
+    connect(sock, &VSock::bytesWritten, this, [=] {
+        if(sock->bytesToWrite() <= 0){
+            sock->close();
+            sock->disconnect();
+            sock->deleteLater();
+        }
+    });
 }
 
-void GuestBridge::handleVmSockReadReady() {
-    requestStr += m_vm->m_vmReadSocket->readAll();
+void GuestBridge::handleVmSockReadReady(VSock* sock) {
+    requestStr += sock->readAll();
+
     while(requestStr.contains("\x1e") != false){
         QString request = requestStr;
         request.truncate(requestStr.indexOf("\x1e"));
-        parseRequest(request);
+        parseRequest(sock, request);
         requestStr.remove(0, request.length() + 1);
     }
 }
