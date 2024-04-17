@@ -145,7 +145,6 @@ void VSock::handleWriteAvaliable() {
         setErrorString(strerror(m_err));
         emit errorOccurred(m_err);
     }
-    qDebug() << m_writeBuffor.size();
 
     emit bytesWritten(writtenBytes);
 }
