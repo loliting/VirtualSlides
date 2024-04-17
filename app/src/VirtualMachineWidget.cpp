@@ -75,12 +75,14 @@ void VirtualMachineWidget::restartVm() {
 }
 
 void VirtualMachineWidget::handleNetworkChanged() {
-    if(m_vm->net()){
-        m_title->setText(m_vm->net()->id() + ": " + m_vm->id());
-    }
-    else{
-        m_title->setText(m_vm->id());
-    }
+    QString title = "";
+    if(m_vm->net())
+        title += m_vm->net()->id() + ": ";
+    title += m_vm->id();
+    #if DEBUG_BUILD
+    title += " (cid: " + QString::number(m_vm->cid()) + ")";
+    #endif
+    m_title->setText(title);
     setWindowTitle(m_title->text());
 }
 

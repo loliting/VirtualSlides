@@ -52,6 +52,9 @@ target_link_libraries(virtual-slides PRIVATE
     libzip::zip
 )
 
+target_compile_definitions(virtual-slides PRIVATE $<$<CONFIG:Debug>:DEBUG_BUILD=1>)
+
+
 add_executable(vs-sock-stdio-connector src/SockStdioConnector.cpp src/SockStdioConnector.hpp)
 
 target_link_libraries(vs-sock-stdio-connector PRIVATE
