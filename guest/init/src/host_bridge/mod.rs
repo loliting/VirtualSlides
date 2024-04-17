@@ -11,7 +11,6 @@ mod legacy_host_bridge_impl;
 #[cfg(feature = "legacy-host-bridge")]
 pub use legacy_host_bridge_impl::HostBridge;
 
-use std::cmp::max;
 use std::time::{Duration, Instant};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -61,11 +60,14 @@ impl HostBridge {
         if response.status == Status::Err {
             return Err(anyhow!(response.error.unwrap_or_default()));
         }
+        let bytes_recived: u32 = buf.len() as u32;
+        let speed = bytes_recived as f64 / now.elapsed().as_secs_f64();
 
-        let bytes_recived = buf.len().try_into().unwrap();
-        let speed = bytes_recived / max(1, now.elapsed().as_secs());
-
-        println!("\nRead {} in: {:.2?} ({}/s)", HumanBytes(bytes_recived), now.elapsed(), HumanBytes(speed));
+        println!("\nRead {} in: {:.2?} ({}/s)",
+            HumanBytes(bytes_recived as u64),
+            now.elapsed(),
+            HumanBytes(speed as u64)
+        );
 
         Ok(response)
     }
