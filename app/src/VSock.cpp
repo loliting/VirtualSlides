@@ -1,0 +1,164 @@
+#include "VSock.hpp"
+
+#include <unistd.h>
+#include <sys/socket.h>
+#include <linux/vm_sockets.h>
+#include <fcntl.h>
+
+
+bool VSock::connectToHost(uint32_t cid, uint32_t port) {
+    if(m_connected) // TODO: emit an error
+        return false;
+    
+    if((m_sockfd = socket(AF_VSOCK, SOCK_STREAM, 0)) == -1) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        return false;
+    }
+
+    if(fcntl(m_sockfd, F_SETFL, O_NONBLOCK) == -1) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        return false;
+    }
+    
+    struct sockaddr_vm *addr = new struct sockaddr_vm;
+    addr->svm_cid = cid;
+    addr->svm_family = AF_VSOCK;
+    addr->svm_port = port;
+    m_addr = (struct sockaddr*)addr;
+
+    if(::connect(m_sockfd, m_addr, sizeof(struct sockaddr_vm)) == -1) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        return false;
+    }
+
+
+    m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
+    connect(m_readNotifier, &QSocketNotifier::activated,
+        this, &VSock::handleReadAvaliable);
+    
+    m_writeNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Write, this);
+    connect(m_writeNotifier, &QSocketNotifier::activated,
+        this, &VSock::handleWriteAvaliable);
+
+    m_connected = true;
+
+    return QIODevice::open(ReadWrite);
+}
+
+VSock::~VSock() {
+    if(m_connected)
+        close();
+}
+
+void VSock::close() {
+    m_connected = false;
+    ::close(m_sockfd);
+
+    if(m_readNotifier)
+        m_readNotifier->deleteLater();
+    if(m_writeNotifier)
+        m_writeNotifier->deleteLater();
+    if(m_addr)
+        delete m_addr;
+    
+    emit disconnected();
+}
+
+VSock::VSock(int fd, QObject *parent) : QIODevice(parent) {
+    m_sockfd = fd;
+    m_connected = true;
+
+    m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
+    connect(m_readNotifier, &QSocketNotifier::activated,
+        this, &VSock::handleReadAvaliable);
+    
+    m_writeNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Write, this);
+    connect(m_writeNotifier, &QSocketNotifier::activated,
+        this, &VSock::handleWriteAvaliable);
+
+    QIODevice::open(QIODevice::ReadWrite);
+}
+
+qint64 VSock::readData(char *data, qint64 maxSize) {
+    if(!m_connected)
+        return -1;
+
+    qint64 size = qMin<qint64>(maxSize, m_readBuffor.size());
+    memmove(data, m_readBuffor.data(), size);
+    m_readBuffor.remove(0, size);
+
+    return size;
+}
+
+qint64 VSock::writeData(const char *data, qint64 maxSize) {
+    if(!m_connected)
+        return -1;
+    
+    m_writeBuffor += QByteArray(data, maxSize);
+
+    handleWriteAvaliable();
+    m_writeNotifier->setEnabled(!m_writeBuffor.isEmpty());
+
+    return maxSize;
+}
+
+
+void VSock::handleReadAvaliable() {
+    char c;
+    errno = 0;
+    
+    qint64 bytesRead = 0;
+
+    while (::read(m_sockfd, &c, 1) > 0) {
+        m_readBuffor += c;
+        ++bytesRead;
+    }
+
+    if(errno != EAGAIN && errno != 0) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        emit errorOccurred(m_err);
+        return;
+    }
+
+    if(bytesRead > 0)
+        emit readyRead();
+}
+
+void VSock::handleWriteAvaliable() {
+    if(m_writeBuffor.isEmpty()){
+        m_writeNotifier->setEnabled(false);
+        return;
+    }
+    
+    errno = 0;
+    ssize_t writtenBytes = ::write(m_sockfd, m_writeBuffor.data(), m_writeBuffor.size());
+    
+    if(writtenBytes > 0)
+        m_writeBuffor.remove(0, writtenBytes);
+    
+    if(errno != EAGAIN && errno != 0) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        emit errorOccurred(m_err);
+    }
+    qDebug() << m_writeBuffor.size();
+
+    emit bytesWritten(writtenBytes);
+}
+
+
+qint64 VSock::bytesAvailable() const {
+    return m_readBuffor.size() + QIODevice::bytesAvailable();
+}
+
+qint64 VSock::bytesToWrite() const {
+    return m_writeBuffor.size() + QIODevice::bytesToWrite();
+}
+
+bool VSock::canReadLine() const {
+    return m_readBuffor.contains('\n') || QIODevice::canReadLine();
+}

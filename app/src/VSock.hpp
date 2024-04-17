@@ -1,0 +1,65 @@
+#ifndef VSOCK_HPP
+#define VSOCK_HPP
+
+#include <QtCore/QtCore>
+#include <QtCore/QSocketNotifier>
+
+struct sockaddr;
+class VSockServer;
+
+class VSock : public QIODevice {
+    Q_OBJECT
+public:
+    enum SpecialCIDs {
+        Any = -1U,
+        Hypervisor = 0,
+        Local,
+        Host
+    };
+
+    VSock(QObject *parent) : QIODevice(parent) { }
+    ~VSock();
+
+    bool connectToHost(uint32_t cid, uint32_t port);
+    void close();
+
+    qint64 bytesAvailable() const;
+    qint64 bytesToWrite() const;
+
+    bool canReadLine() const;
+    
+    qint64 readData(char *data, qint64 maxSize) override;
+    qint64 writeData(const char *data, qint64 maxSize) override;
+
+    int error() const { return m_err; }
+signals:
+    void connected();
+
+    /* 
+     * TODO: VSock does not become disconnected automatically when the other
+     * side disconnects
+     */
+    void disconnected(); 
+    void errorOccurred(int error);
+private:
+    VSock(int fd, QObject *parent = nullptr);
+    void handleReadAvaliable();
+    void handleWriteAvaliable();
+private:
+    bool m_connected = false;
+    int m_sockfd;
+    struct sockaddr* m_addr = nullptr;
+
+    int m_err = 0;
+
+    QByteArray m_writeBuffor;
+    QByteArray m_readBuffor;
+
+    QSocketNotifier* m_readNotifier = nullptr;
+    QSocketNotifier* m_writeNotifier = nullptr;
+    
+
+    friend class VSockServer;
+};
+
+#endif // VSOCK_HPP
