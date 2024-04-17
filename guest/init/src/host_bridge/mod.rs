@@ -1,20 +1,16 @@
 // Module for talking with the host
 
-#[cfg(not(feature = "legacy-host-bridge"))]
-mod host_bridge_impl;
-#[cfg(not(feature = "legacy-host-bridge"))]
-pub use host_bridge_impl::HostBridge;
-
-
-#[cfg(feature = "legacy-host-bridge")]
-mod legacy_host_bridge_impl;
-#[cfg(feature = "legacy-host-bridge")]
-pub use legacy_host_bridge_impl::HostBridge;
-
+use std::io::{BufRead, BufReader, Write};
 use std::time::{Duration, Instant};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use indicatif::{HumanBytes, ProgressBar};
+use vsock::{get_local_cid, VsockAddr, VsockStream};
+
+
+pub struct HostBridge {
+    stream: VsockStream
+}
 
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
@@ -43,6 +39,30 @@ pub struct Response {
 }
 
 impl HostBridge {
+    pub fn new() -> Result<Self> {
+        let cid = get_local_cid()?;
+        let sock = VsockAddr::new(2, cid);
+        let stream = VsockStream::connect(&sock)?;
+        Ok(HostBridge { stream })
+    }
+
+    fn do_read(&mut self) -> Result<Vec<u8>> {
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut reader = BufReader::new(&self.stream);
+        reader.read_until(b'\x1e', &mut buf)?;
+        buf.pop();
+        
+        Ok(buf)
+    }
+
+    fn do_write(&mut self, request: RequestType) -> Result<()> {
+        let mut message = serde_json::json!({"type": request}).to_string();
+        message.push_str("\x1e");
+        self.stream.write(message.as_bytes())?;
+        Ok(())
+    }
+
     fn write(&mut self, request: RequestType) -> Result<()> {
         self.do_write(request)?;
         Ok(())
