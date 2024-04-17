@@ -13,7 +13,7 @@ pub struct HostBridge {
 impl HostBridge {
     pub fn new() -> Result<Self> {
         let cid = get_local_cid()?;
-        let sock = VsockAddr::new(0, cid);
+        let sock = VsockAddr::new(2, cid);
         let stream = VsockStream::connect(&sock)?;
         Ok(HostBridge { stream })
     }
@@ -30,7 +30,7 @@ impl HostBridge {
 
     pub(in super) fn do_write(&mut self, request: RequestType) -> Result<()> {
         let mut message = serde_json::json!({"type": request}).to_string();
-        message.push_str("\x1e\n");
+        message.push_str("\x1e");
         self.stream.write(message.as_bytes())?;
         Ok(())
     }
