@@ -1,14 +1,23 @@
 #include "VSock.hpp"
 
+#include <QtCore/qsystemdetection.h>
+
 #include <unistd.h>
 #include <sys/socket.h>
-#include <linux/vm_sockets.h>
 #include <fcntl.h>
 
+#ifdef Q_OS_LINUX
+#include <linux/vm_sockets.h>
+#elif Q_OS_MACOS
+#include <sys/vsock.h>
+#endif
 
 bool VSock::connectToHost(uint32_t cid, uint32_t port) {
-    if(m_connected) // TODO: emit an error
+    if(m_connected){
+        m_err = EPERM;
+        setErrorString("Socket already connected");
         return false;
+    }
     
     if((m_sockfd = socket(AF_VSOCK, SOCK_STREAM, 0)) == -1) {
         m_err = errno;
@@ -43,9 +52,8 @@ bool VSock::connectToHost(uint32_t cid, uint32_t port) {
     connect(m_writeNotifier, &QSocketNotifier::activated,
         this, &VSock::handleWriteAvaliable);
 
-    m_connected = true;
-
-    return QIODevice::open(ReadWrite);
+    m_connected = QIODevice::open(ReadWrite);
+    return m_connected;
 }
 
 VSock::~VSock() {
@@ -67,7 +75,7 @@ void VSock::close() {
     emit disconnected();
 }
 
-VSock::VSock(int fd, QObject *parent) : QIODevice(parent) {
+bool VSock::setFd(int fd) {
     m_sockfd = fd;
     m_connected = true;
 
@@ -79,7 +87,8 @@ VSock::VSock(int fd, QObject *parent) : QIODevice(parent) {
     connect(m_writeNotifier, &QSocketNotifier::activated,
         this, &VSock::handleWriteAvaliable);
 
-    QIODevice::open(QIODevice::ReadWrite);
+    m_connected = QIODevice::open(QIODevice::ReadWrite);
+    return m_connected;
 }
 
 qint64 VSock::readData(char *data, qint64 maxSize) {
@@ -118,6 +127,11 @@ void VSock::handleReadAvaliable() {
     }
 
     if(errno != EAGAIN && errno != 0) {
+        if(errno == EPIPE){
+            close();
+            emit disconnected();
+            return;
+        }
         m_err = errno;
         setErrorString(strerror(m_err));
         emit errorOccurred(m_err);
@@ -141,6 +155,11 @@ void VSock::handleWriteAvaliable() {
         m_writeBuffor.remove(0, writtenBytes);
     
     if(errno != EAGAIN && errno != 0) {
+        if(errno == EPIPE){
+            close();
+            emit disconnected();
+            return;
+        }
         m_err = errno;
         setErrorString(strerror(m_err));
         emit errorOccurred(m_err);

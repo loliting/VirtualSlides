@@ -17,16 +17,16 @@ public:
         Host
     };
 
-    VSock(QObject *parent) : QIODevice(parent) { }
+    VSock(QObject *parent = nullptr) : QIODevice(parent) { }
     ~VSock();
 
     bool connectToHost(uint32_t cid, uint32_t port);
-    void close();
+    void close() override;
 
-    qint64 bytesAvailable() const;
-    qint64 bytesToWrite() const;
+    qint64 bytesAvailable() const override;
+    qint64 bytesToWrite() const override;
 
-    bool canReadLine() const;
+    bool canReadLine() const override;
     
     qint64 readData(char *data, qint64 maxSize) override;
     qint64 writeData(const char *data, qint64 maxSize) override;
@@ -42,7 +42,7 @@ signals:
     void disconnected(); 
     void errorOccurred(int error);
 private:
-    VSock(int fd, QObject *parent = nullptr);
+    bool setFd(int fd);
     void handleReadAvaliable();
     void handleWriteAvaliable();
 private:

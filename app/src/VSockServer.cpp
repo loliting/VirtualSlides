@@ -5,11 +5,17 @@
 #include <QtCore/QMap>
 #include <QtCore/QMutex>
 #include <QtCore/QVector>
+#include <QtCore/qsystemdetection.h>
 
 #include <sys/socket.h>
-#include <linux/vm_sockets.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#ifdef Q_OS_LINUX
+#include <linux/vm_sockets.h>
+#elif Q_OS_MACOS
+#include <sys/vsock.h>
+#endif
 
 VSockServer::VSockServer(QObject *parent) : QObject(parent) { }
 
@@ -25,17 +31,7 @@ VSockServer::~VSockServer() {
 void VSockServer::handleClientAvaliable() {
     int fd;
 
-    for(;;) {
-        fd = ::accept(m_sockfd, NULL, NULL);
-        if(fd == -1){
-            if(errno == EAGAIN)
-                break;
-            m_err = errno;
-            m_errStr = strerror(m_err);
-            emit errorOccurred(m_err);
-            continue;
-        }
-
+    while((fd = ::accept(m_sockfd, NULL, NULL)) != -1) {
         if(fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
             m_err = errno;
             m_errStr = strerror(m_err);
@@ -44,12 +40,26 @@ void VSockServer::handleClientAvaliable() {
             continue;
         }
 
-        VSock *sock = new VSock(fd, this);
+        VSock *sock = new VSock(this);
+        if(!sock->setFd(fd)){
+            m_err = errno;
+            m_errStr = strerror(m_err);
+            ::close(fd);
+            emit errorOccurred(m_err);
+            sock->deleteLater();
+            continue;
+        }
 
         m_clients.insert(sock);
         m_pendingConnection.enqueue(sock);
 
         emit newConnection();
+    }
+    
+    if(fd == -1 && errno != EAGAIN){
+        m_err = errno;
+        m_errStr = strerror(m_err);
+        emit errorOccurred(m_err);
     }
 }
 
