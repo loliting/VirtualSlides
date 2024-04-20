@@ -13,7 +13,7 @@
 
 #ifdef Q_OS_LINUX
 #include <linux/vm_sockets.h>
-#elif Q_OS_MACOS
+#elif defined(Q_OS_MACOS)
 #include <sys/vsock.h>
 #endif
 
