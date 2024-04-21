@@ -32,14 +32,6 @@ void VSockServer::handleClientAvaliable() {
     int fd;
 
     while((fd = ::accept(m_sockfd, NULL, NULL)) != -1) {
-        if(fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
-            m_err = errno;
-            m_errStr = strerror(m_err);
-            ::close(fd);
-            emit errorOccurred(m_err);
-            continue;
-        }
-
         VSock *sock = new VSock(this);
         if(!sock->setFd(fd)){
             m_err = errno;
@@ -125,6 +117,8 @@ VSock* VSockServer::nextPendingConnection() {
 }
 
 void VSockServer::close() {
+    if(!m_listening)
+        return;
     m_listening = false;
     if(m_readNotifier){
         m_readNotifier->disconnect();
@@ -134,4 +128,5 @@ void VSockServer::close() {
 
     ::close(m_sockfd);
     delete m_addr;
+    m_addr = nullptr;
 }

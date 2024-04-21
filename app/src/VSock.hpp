@@ -25,8 +25,10 @@ public:
 
     qint64 bytesAvailable() const override;
     qint64 bytesToWrite() const override;
-
     bool canReadLine() const override;
+
+    bool waitForReadyRead(int msecs) override;
+    bool waitForBytesWritten(int msecs) override;
     
     qint64 readData(char *data, qint64 maxSize) override;
     qint64 writeData(const char *data, qint64 maxSize) override;
@@ -42,6 +44,8 @@ signals:
     void disconnected(); 
     void errorOccurred(int error);
 private:
+    bool setBlocking(bool block);
+
     bool setFd(int fd);
     void handleReadAvaliable();
     void handleWriteAvaliable();

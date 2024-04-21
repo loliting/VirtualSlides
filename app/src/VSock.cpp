@@ -25,12 +25,6 @@ bool VSock::connectToHost(uint32_t cid, uint32_t port) {
         return false;
     }
 
-    if(fcntl(m_sockfd, F_SETFL, O_NONBLOCK) == -1) {
-        m_err = errno;
-        setErrorString(strerror(m_err));
-        return false;
-    }
-    
     struct sockaddr_vm *addr = new struct sockaddr_vm;
     addr->svm_cid = cid;
     addr->svm_family = AF_VSOCK;
@@ -43,6 +37,8 @@ bool VSock::connectToHost(uint32_t cid, uint32_t port) {
         return false;
     }
 
+    if(!setBlocking(false))
+        return false;
 
     m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
     connect(m_readNotifier, &QSocketNotifier::activated,
@@ -78,6 +74,9 @@ void VSock::close() {
 bool VSock::setFd(int fd) {
     m_sockfd = fd;
     m_connected = true;
+
+    if(!setBlocking(false))
+        return false;
 
     m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
     connect(m_readNotifier, &QSocketNotifier::activated,
@@ -179,4 +178,65 @@ qint64 VSock::bytesToWrite() const {
 
 bool VSock::canReadLine() const {
     return m_readBuffor.contains('\n') || QIODevice::canReadLine();
+}
+
+bool VSock::waitForReadyRead(int msecs){
+    if(msecs != -1)
+        return false; // TODO: implement timing out 
+
+    if(!m_readBuffor.isEmpty())
+        return true;
+    m_readNotifier->setEnabled(false);
+    setBlocking(true);
+
+    char c;
+    errno = 0;
+    
+    if(::read(m_sockfd, &c, 1) > 0)
+        m_readBuffor += c;
+
+    if(errno) {
+        if(errno == EPIPE){
+            close();
+            emit disconnected();
+            return false;
+        }
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        emit errorOccurred(m_err);
+    }
+
+    m_readNotifier->setEnabled(true);
+    setBlocking(false);
+    return true;
+}
+
+bool VSock::waitForBytesWritten(int msecs){
+    if(msecs != -1)
+        return false; // TODO: implement timing out 
+
+    if(m_writeBuffor.isEmpty())
+        return false;
+    
+    m_writeNotifier->setEnabled(false);
+    setBlocking(true);
+
+    handleWriteAvaliable();
+
+    m_writeNotifier->setEnabled(true);
+    setBlocking(false);
+
+    return true;
+}
+
+bool VSock::setBlocking(bool block){
+    int flags = fcntl(m_sockfd, F_GETFL, 0) & ~O_NONBLOCK;
+
+    if(fcntl(m_sockfd, F_SETFL, flags | (!block * O_NONBLOCK)) == -1) {
+        m_err = errno;
+        setErrorString(strerror(m_err));
+        return false;
+    }
+
+    return true;
 }
