@@ -22,6 +22,7 @@ public:
     bool listen(uint32_t cid, uint32_t port);
     void close();
     
+    bool hasPendingConnections() const { return !m_pendingConnection.isEmpty(); }
     VSock* nextPendingConnection();
 
     bool isListening() const { return m_listening; }
