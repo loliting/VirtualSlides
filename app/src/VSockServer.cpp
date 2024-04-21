@@ -42,6 +42,12 @@ void VSockServer::handleClientAvaliable() {
             continue;
         }
 
+        connect(sock, &VSock::destroyed, this, [=] {
+            sock->disconnect(this, nullptr);
+            m_clients.remove(sock);
+            m_pendingConnection.removeAll(sock);
+        });
+
         m_clients.insert(sock);
         m_pendingConnection.enqueue(sock);
 
@@ -109,9 +115,6 @@ VSock* VSockServer::nextPendingConnection() {
         return nullptr;
     
     VSock* sock = m_pendingConnection.dequeue();
-    sock->connect(sock, &VSock::disconnected, [=] {
-        this->m_clients.remove(sock);
-    });
 
     return sock;
 }
