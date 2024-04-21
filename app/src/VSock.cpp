@@ -58,15 +58,24 @@ VSock::~VSock() {
 }
 
 void VSock::close() {
+    if(!m_connected)
+        return;
+    
     m_connected = false;
     ::close(m_sockfd);
 
-    if(m_readNotifier)
+    if(m_readNotifier){
         m_readNotifier->deleteLater();
-    if(m_writeNotifier)
+        m_readNotifier = nullptr;
+    }
+    if(m_writeNotifier){
         m_writeNotifier->deleteLater();
-    if(m_addr)
+        m_writeNotifier = nullptr;
+    }
+    if(m_addr){
         delete m_addr;
+        m_addr = nullptr;
+    }
     
     emit disconnected();
 }
