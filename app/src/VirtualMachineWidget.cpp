@@ -4,8 +4,8 @@
 
 #include "Application.hpp"
 
-VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm)
-    : QWidget()
+VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
+    : QWidget(parent)
 {
     assert(vm);
 

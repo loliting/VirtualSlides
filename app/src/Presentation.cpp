@@ -29,6 +29,7 @@ static void parseXmlDimensions(xml_node<char>* xmlNode, PresentationElement* e) 
             qWarning() << xmlNode->name() << "does not contain" << dimName << "attribute.";
             return 0.0f;
         }
+
         if(dimStr.isEmpty()){
             qWarning() << xmlNode->name() << "contains" << dimName << "attribute, but it's empty";
             return 0.0f;
@@ -73,10 +74,13 @@ PresentationElement::PresentationElement() {
     connect(this, SIGNAL(positionChanged(void)), this, SLOT(recalculateRealDim(void)));
 }
 
-PresentationElement::PresentationElement(qreal x, qreal y, qreal height, qreal width) {
+PresentationElement::PresentationElement(qreal x, qreal y, qreal height, qreal width, QWidget *w) {
     PresentationElement();
     m_pos = QPointF(x, y);
     m_size = QSizeF(width, height);
+    
+    m_widget = w;
+    setWidget(m_widget);
 }
 
 void PresentationElement::setWidget(QWidget* w) {
@@ -87,63 +91,7 @@ void PresentationElement::setWidget(QWidget* w) {
     assert(parent != nullptr);
 
     connect(parent, SIGNAL(resize(int, int)), this, SLOT(recalculateRealDim(void)));
-}
-
-PresentationTextBoxElement::PresentationTextBoxElement(QWidget* parent, QString text)
-    : PresentationElement()
-{
-    m_widget = new QLabel(parent);
-    setWidget(m_widget);
-
-    m_widget->setTextFormat(Qt::RichText);
-    m_widget->setText(text);
-    m_widget->show();
-}
-
-PresentationTextBoxElement::PresentationTextBoxElement(QWidget* parent, qreal x, qreal y, qreal height, qreal width, QString text)
-    : PresentationElement(x, y, width, height)
-{
-    PresentationTextBoxElement(parent, text);
-}
-
-PresentationTextBoxElement::~PresentationTextBoxElement() {
-    delete m_widget;
-}
-
-PresentationImageElement::PresentationImageElement(QWidget* parent, QPixmap img)
-    : PresentationElement()
-{
-    m_widget = new QLabel(parent);
-    setWidget(m_widget);
-
-    m_widget->setScaledContents(true);
-    m_widget->setPixmap(img);
-    m_widget->show();
-}
-
-PresentationImageElement::PresentationImageElement(QWidget* parent, qreal x, qreal y, qreal height, qreal width, QPixmap img)
-    : PresentationElement(x, y, width, height)
-{
-    PresentationImageElement(parent, img);
-}
-
-PresentationImageElement::~PresentationImageElement() {
-    delete m_widget;
-}
-
-PresentationVmElement::PresentationVmElement(QWidget* parent, VirtualMachine* vm)
-    : PresentationElement()
-{
-    m_widget = new VirtualMachineWidget(vm);
-    m_widget->setParent(parent);
-    setWidget(m_widget);
-    m_widget->show();
-}
-
-PresentationVmElement::PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachine* vm)
-    : PresentationElement(x, y, width, height)
-{
-    PresentationVmElement(parent, vm);
+    w->show();
 }
 
 PresentationSlide::PresentationSlide(QColor bg) {
@@ -158,7 +106,7 @@ PresentationSlide::PresentationSlide(QPixmap bg) {
 
 PresentationSlide::~PresentationSlide() {
     for(auto element : m_elements){
-        delete element;
+        element->deleteLater();
     }
 }
 
@@ -302,23 +250,26 @@ void Presentation::parseRootXml() {
             if(nodeStr == QString("TextBox").toLower()){
                 textNode = tmpNode->first_node("Text", 0UL, false);
                 if(textNode){
-                    std::stringstream textNodeSs;
-                    textNodeSs << *textNode;
-                    std::string text = textNodeSs.str();
+                    std::string text = (std::stringstream() << *textNode).str();
                     text = text.substr(TEXT_NODE_SZ, text.length() - TEXT_NODE_SZ * 2);
 
-                    PresentationTextBoxElement* tB = nullptr;
-                    tB = new PresentationTextBoxElement(slide, QString::fromStdString(text));
-                    parseXmlDimensions(tmpNode, tB);
+                    QLabel* w = new QLabel(slide);
+                    w->setTextFormat(Qt::RichText);
+                    w->setText(QString::fromStdString(text));
+                    PresentationElement* tE = new PresentationElement();
+                    tE->setWidget(w);
+                    parseXmlDimensions(tmpNode, tE);
 
-                    slide->m_elements.append(tB);
+                    slide->m_elements.append(tE);
                 }
                 else{
                     qWarning() << "TextBox node does not contain \"Text\" subnode.";
                 }
             }
             else if(nodeStr == QString("Image").toLower()){
-                PresentationImageElement* imageElement = nullptr;
+                PresentationElement* tE = new PresentationElement();
+                QLabel* w = new QLabel(slide);
+
                 QPixmap img;
                 srcAttribute = tmpNode->first_attribute("src", 0UL, false);
                 if(srcAttribute == nullptr){
@@ -330,25 +281,30 @@ void Presentation::parseRootXml() {
                 else{
                     qWarning() << "Image src: \"" + QString(srcAttribute->value()) + "\" is not valid";
                 }
-                imageElement = new PresentationImageElement(slide, img);
-                parseXmlDimensions(tmpNode, imageElement);
 
-                slide->m_elements.append(imageElement);
+                w->setScaledContents(true);
+                w->setPixmap(img);
+
+                tE->setWidget(w);
+                parseXmlDimensions(tmpNode, tE);
+
+                slide->m_elements.append(tE);
             }
             else if(nodeStr == QString("vm").toLower()){
                 vmIdAttribute = tmpNode->first_attribute("id", 0UL, false);
                 QString vmId = vmIdAttribute ? vmIdAttribute->value() : nullptr; 
                 VirtualMachine* vm = m_vmManager->getVirtualMachine(vmId);
-                PresentationVmElement* vmElement = nullptr;
-                if(vm){
-                    vmElement = new PresentationVmElement(slide, vm);
-                    parseXmlDimensions(tmpNode, vmElement);
 
-                    slide->m_elements.append(vmElement);
+                if(vm){
+                    PresentationElement* tE = new PresentationElement();
+                    VirtualMachineWidget* w = new VirtualMachineWidget(vm, slide);
+                    tE->setWidget(w);
+                    parseXmlDimensions(tmpNode, tE);
+
+                    slide->m_elements.append(tE);
                 }
                 else{
                     qWarning() << "vm node does not contain \"id\" attribute.";
-
                 }
             }
             else{

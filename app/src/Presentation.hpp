@@ -37,68 +37,36 @@ class PresentationElement : public QObject
     Q_PROPERTY(QSizeF size READ size WRITE setSize NOTIFY sizeChanged);
 public:
     PresentationElement();
-    PresentationElement(qreal x, qreal y, qreal width, qreal height);
+    PresentationElement(qreal x, qreal y, qreal width, qreal height, QWidget *w);
 
-    virtual QWidget* widget() const { return m_widget; }
-    virtual void setWidget(QWidget* w);
+    QWidget* widget() const { return m_widget; }
+    void setWidget(QWidget* w);
 
-    virtual void setX(qreal x) { m_pos.setX(x); }
-    virtual void setY(qreal y) { m_pos.setY(y); }
-    virtual void setPos(QPointF pos) { m_pos = pos; }
+    void setX(qreal x) { m_pos.setX(x); }
+    void setY(qreal y) { m_pos.setY(y); }
+    void setPos(QPointF pos) { m_pos = pos; }
 
-    virtual void setWidth(qreal width) { m_size.setWidth(width); }
-    virtual void setHeight(qreal height) { m_size.setHeight(height); }
-    virtual void setSize(QSizeF size) { m_size = size; }
+    void setWidth(qreal width) { m_size.setWidth(width); }
+    void setHeight(qreal height) { m_size.setHeight(height); }
+    void setSize(QSizeF size) { m_size = size; }
 
-    virtual qreal x() const { return m_pos.x(); }
-    virtual qreal y() const  { return m_pos.y(); }
-    virtual QPointF pos() const { return m_pos; }
+    qreal x() const { return m_pos.x(); }
+    qreal y() const  { return m_pos.y(); }
+    QPointF pos() const { return m_pos; }
 
-    virtual qreal width() const { return m_size.width(); }
-    virtual qreal height() const { return m_size.height(); }
-    virtual QSizeF size() const { return m_size; }
+    qreal width() const { return m_size.width(); }
+    qreal height() const { return m_size.height(); }
+    QSizeF size() const { return m_size; }
 signals:
     void positionChanged();
     void sizeChanged();
     void widgetSet();
 private slots:
-    virtual void recalculateRealDim();
+    void recalculateRealDim();
 private:
     QSizeF m_size = QSizeF();
     QPointF m_pos = QPointF();
-    QWidget* m_widget = Q_NULLPTR;
-};
-
-class PresentationTextBoxElement : public PresentationElement
-{
-    Q_OBJECT
-public:
-    PresentationTextBoxElement(QWidget* parent, QString text);
-    PresentationTextBoxElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, QString text);
-    ~PresentationTextBoxElement();
-private:
-    QLabel* m_widget;
-};
-
-class PresentationImageElement : public PresentationElement
-{
-    Q_OBJECT
-public:
-    PresentationImageElement(QWidget* parent, QPixmap img);
-    PresentationImageElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, QPixmap img);
-    ~PresentationImageElement();
-private:
-    QLabel* m_widget;
-};
-
-class PresentationVmElement : public PresentationElement
-{
-    Q_OBJECT
-public:
-    PresentationVmElement(QWidget* parent, VirtualMachine* vm);
-    PresentationVmElement(QWidget* parent, qreal x, qreal y, qreal width, qreal height, VirtualMachine* vm);
-private:
-    VirtualMachineWidget* m_widget;
+    QWidget* m_widget = nullptr;
 };
 
 class PresentationSlide : public QLabel 

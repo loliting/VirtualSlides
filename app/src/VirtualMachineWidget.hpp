@@ -17,7 +17,7 @@ class VirtualMachineWidget : public QWidget
 {
     Q_OBJECT
 public:
-    VirtualMachineWidget(VirtualMachine* vm);
+    VirtualMachineWidget(VirtualMachine* vm, QWidget* parent = nullptr);
     ~VirtualMachineWidget();
 private:
     VirtualMachine* m_vm = nullptr;
