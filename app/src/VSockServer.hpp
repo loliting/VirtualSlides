@@ -22,6 +22,8 @@ public:
     bool listen(uint32_t cid, uint32_t port);
     void close();
     
+    bool waitForNewConnection(int msec = 0, bool *timedOut = nullptr);
+
     bool hasPendingConnections() const { return !m_pendingConnection.isEmpty(); }
     VSock* nextPendingConnection();
 

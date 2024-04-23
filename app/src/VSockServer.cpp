@@ -90,12 +90,16 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
     m_addr = (struct sockaddr*)addr;
 
     if(::bind(m_sockfd, m_addr, sizeof(struct sockaddr_vm)) == -1) {
+        delete addr;
+        addr = nullptr;
         m_err = errno;
         m_errStr = strerror(m_err);
         return false;
     }
 
     if(::listen(m_sockfd, 0) == -1){
+        delete addr;
+        addr = nullptr;
         m_err = errno;
         m_errStr = strerror(m_err);
         return false;
@@ -132,4 +136,51 @@ void VSockServer::close() {
     ::close(m_sockfd);
     delete m_addr;
     m_addr = nullptr;
+}
+
+bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
+    auto setTimedOut = [=](bool didTimeOut) {
+        if(timedOut)
+            *timedOut = didTimeOut;
+    };
+
+    if(!m_listening)
+        return false;
+    
+    bool isConnectionAvaliable = hasPendingConnections();
+    
+    if(msec == 0 || isConnectionAvaliable){
+        setTimedOut(!isConnectionAvaliable);
+        return isConnectionAvaliable;
+    }
+    m_readNotifier->setEnabled(false);
+
+    int fd = ::accept(m_sockfd, NULL, NULL);
+
+    VSock *sock = new VSock(this);
+    if(!sock->setFd(fd)){
+        m_err = errno;
+        m_errStr = strerror(m_err);
+        ::close(fd);
+        emit errorOccurred(m_err);
+        sock->deleteLater();
+        setTimedOut(false);
+        return false;
+    }
+
+    connect(sock, &VSock::destroyed, this, [=] {
+        sock->disconnect(this, nullptr);
+        m_clients.remove(sock);
+        m_pendingConnection.removeAll(sock);
+    });
+
+    m_clients.insert(sock);
+    m_pendingConnection.enqueue(sock);
+
+    emit newConnection();
+    
+    m_readNotifier->setEnabled(true);
+
+    setTimedOut(false);
+    return true;
 }

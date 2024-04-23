@@ -238,14 +238,17 @@ bool VSock::waitForBytesWritten(int msecs){
     return true;
 }
 
-bool VSock::setBlocking(bool block){
-    int flags = fcntl(m_sockfd, F_GETFL, 0) & ~O_NONBLOCK;
+bool VSock::setBlocking(int fd, bool block){
+    int flags = fcntl(fd, F_GETFL, 0) & ~O_NONBLOCK;
 
-    if(fcntl(m_sockfd, F_SETFL, flags | (!block * O_NONBLOCK)) == -1) {
+    return fcntl(fd, F_SETFL, flags | (!block * O_NONBLOCK)) != -1;
+}
+
+bool VSock::setBlocking(bool block){
+    if(!setBlocking(m_sockfd, block)){
         m_err = errno;
         setErrorString(strerror(m_err));
-        return false;
+        emit errorOccurred(m_err);
     }
-
     return true;
 }

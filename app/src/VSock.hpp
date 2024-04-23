@@ -44,6 +44,7 @@ signals:
     void disconnected(); 
     void errorOccurred(int error);
 private:
+    static bool setBlocking(int fd, bool block);
     bool setBlocking(bool block);
 
     bool setFd(int fd);
