@@ -36,8 +36,6 @@ public:
 signals:
     void errorOccurred(int error);
     void newConnection();
-private slots:
-    void handleClientAvaliable();
 private:
     bool m_listening = false;
 

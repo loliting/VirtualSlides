@@ -8,7 +8,6 @@
 #include <QtCore/qsystemdetection.h>
 
 #include <sys/socket.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #ifdef Q_OS_LINUX
@@ -28,40 +27,6 @@ VSockServer::~VSockServer() {
     close();
 }
 
-void VSockServer::handleClientAvaliable() {
-    int fd;
-
-    while((fd = ::accept(m_sockfd, NULL, NULL)) != -1) {
-        VSock *sock = new VSock(this);
-        if(!sock->setFd(fd)){
-            m_err = errno;
-            m_errStr = strerror(m_err);
-            ::close(fd);
-            emit errorOccurred(m_err);
-            sock->deleteLater();
-            continue;
-        }
-
-        connect(sock, &VSock::destroyed, this, [=] {
-            sock->disconnect(this, nullptr);
-            m_clients.remove(sock);
-            m_pendingConnection.removeAll(sock);
-        });
-
-        m_clients.insert(sock);
-        m_pendingConnection.enqueue(sock);
-
-        emit newConnection();
-    }
-    
-    if(fd == -1 && errno != EAGAIN){
-        m_err = errno;
-        m_errStr = strerror(m_err);
-        emit errorOccurred(m_err);
-    }
-}
-
-
 bool VSockServer::listen(uint32_t cid, uint32_t port) {
     if(m_listening){
         if(cid == m_cid && m_port == port)
@@ -75,12 +40,14 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
         return false;
     }
 
-    if(fcntl(m_sockfd, F_SETFL, O_NONBLOCK) == -1) {
+
+    if(!VSock::setBlocking(m_sockfd, false)){
         m_err = errno;
         m_errStr = strerror(m_err);
+        emit errorOccurred(m_err);
         return false;
     }
-    
+
     struct sockaddr_vm *addr = new struct sockaddr_vm;
     m_cid = cid;
     addr->svm_cid = cid;
@@ -108,7 +75,7 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
 
     m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
     connect(m_readNotifier, &QSocketNotifier::activated,
-        this, &VSockServer::handleClientAvaliable);
+        this, [=]{ waitForNewConnection(0); });
 
     m_listening = true;
     return true;
@@ -139,24 +106,36 @@ void VSockServer::close() {
 }
 
 bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
-    auto setTimedOut = [=](bool didTimeOut) {
+    auto cleanUp = [=](bool didTimeOut) {
         if(timedOut)
             *timedOut = didTimeOut;
+        if(msec != 0){
+            m_readNotifier->setEnabled(true);
+            VSock::setBlocking(m_sockfd, false);
+        }
     };
 
     if(!m_listening)
         return false;
-    
-    bool isConnectionAvaliable = hasPendingConnections();
-    
-    if(msec == 0 || isConnectionAvaliable){
-        setTimedOut(!isConnectionAvaliable);
-        return isConnectionAvaliable;
+        
+    if(msec != 0){
+        VSock::setBlocking(m_sockfd, true);
+        m_readNotifier->setEnabled(false);
     }
-    m_readNotifier->setEnabled(false);
 
     int fd = ::accept(m_sockfd, NULL, NULL);
-
+    
+    if(fd == -1){
+        cleanUp(errno == EAGAIN);
+        if(errno != EAGAIN){
+            m_err = errno;
+            m_errStr = strerror(m_err);
+            ::close(fd);
+            emit errorOccurred(m_err);
+        }
+        return false;
+    }
+    
     VSock *sock = new VSock(this);
     if(!sock->setFd(fd)){
         m_err = errno;
@@ -164,7 +143,7 @@ bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
         ::close(fd);
         emit errorOccurred(m_err);
         sock->deleteLater();
-        setTimedOut(false);
+        cleanUp(false);
         return false;
     }
 
@@ -179,8 +158,6 @@ bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
 
     emit newConnection();
     
-    m_readNotifier->setEnabled(true);
-
-    setTimedOut(false);
+    cleanUp(false);
     return true;
 }
