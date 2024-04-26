@@ -123,7 +123,7 @@ qint64 VSock::writeData(const char *data, qint64 maxSize) {
 }
 
 
-void VSock::handleReadAvaliable() {
+qint64 VSock::handleReadAvaliable() {
     char c;
     errno = 0;
     
@@ -138,22 +138,24 @@ void VSock::handleReadAvaliable() {
         if(errno == EPIPE){
             close();
             emit disconnected();
-            return;
+            return -1;
         }
         m_err = errno;
         setErrorString(strerror(m_err));
         emit errorOccurred(m_err);
-        return;
+        return -1;
     }
 
     if(bytesRead > 0)
         emit readyRead();
+
+    return bytesRead;
 }
 
-void VSock::handleWriteAvaliable() {
+bool VSock::handleWriteAvaliable() {
     if(m_writeBuffor.isEmpty()){
         m_writeNotifier->setEnabled(false);
-        return;
+        return true;
     }
     
     errno = 0;
@@ -166,7 +168,7 @@ void VSock::handleWriteAvaliable() {
         if(errno == EPIPE){
             close();
             emit disconnected();
-            return;
+            return false;
         }
         m_err = errno;
         setErrorString(strerror(m_err));
@@ -174,8 +176,9 @@ void VSock::handleWriteAvaliable() {
     }
 
     emit bytesWritten(writtenBytes);
+    
+    return true;
 }
-
 
 qint64 VSock::bytesAvailable() const {
     return m_readBuffor.size() + QIODevice::bytesAvailable();
@@ -190,58 +193,40 @@ bool VSock::canReadLine() const {
 }
 
 bool VSock::waitForReadyRead(int msecs){
-    if(msecs != -1)
-        return false; // TODO: implement timing out 
-
     if(!m_readBuffor.isEmpty())
-        return true;
-    m_readNotifier->setEnabled(false);
-    setBlocking(true);
-
-    char c;
-    errno = 0;
+       return true;
     
-    if(::read(m_sockfd, &c, 1) > 0)
-        m_readBuffor += c;
+    QDeadlineTimer deadline(msecs);
 
-    if(errno) {
-        if(errno == EPIPE){
-            close();
-            emit disconnected();
-            return false;
-        }
-        m_err = errno;
-        setErrorString(strerror(m_err));
-        emit errorOccurred(m_err);
-    }
+    qint64 bytesRead;
 
-    m_readNotifier->setEnabled(true);
-    setBlocking(false);
-    return true;
+    do{
+        bytesRead = handleReadAvaliable(); 
+    } while(bytesRead == 0 && deadline.remainingTime());
+
+    return bytesRead > 0;
 }
 
 bool VSock::waitForBytesWritten(int msecs){
-    if(msecs != -1)
-        return false; // TODO: implement timing out 
-
     if(m_writeBuffor.isEmpty())
-        return false;
+       return true;
     
-    m_writeNotifier->setEnabled(false);
-    setBlocking(true);
+    QDeadlineTimer deadline(msecs);
 
-    handleWriteAvaliable();
-
-    m_writeNotifier->setEnabled(true);
-    setBlocking(false);
+    do{
+        if(!handleWriteAvaliable())
+            return false;
+    } while(m_writeBuffor.size() > 0 && deadline.remainingTime());
 
     return true;
 }
 
 bool VSock::setBlocking(int fd, bool block){
-    int flags = fcntl(fd, F_GETFL, 0) & ~O_NONBLOCK;
+    int flags = fcntl(fd, F_GETFL, 0);
+    flags &= ~O_NONBLOCK;
+    flags |= (!block * O_NONBLOCK);
 
-    return fcntl(fd, F_SETFL, flags | (!block * O_NONBLOCK)) != -1;
+    return fcntl(fd, F_SETFL, flags) != -1;
 }
 
 bool VSock::setBlocking(bool block){

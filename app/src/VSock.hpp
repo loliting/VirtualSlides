@@ -48,8 +48,8 @@ private:
     bool setBlocking(bool block);
 
     bool setFd(int fd);
-    void handleReadAvaliable();
-    void handleWriteAvaliable();
+    qint64 handleReadAvaliable();
+    bool handleWriteAvaliable();
 private:
     bool m_connected = false;
     int m_sockfd;
