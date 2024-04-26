@@ -19,11 +19,6 @@
 VSockServer::VSockServer(QObject *parent) : QObject(parent) { }
 
 VSockServer::~VSockServer() {
-    for(auto client : m_clients) {
-        client->disconnect(this, nullptr);
-        client->deleteLater();
-    }
-
     close();
 }
 
@@ -93,6 +88,12 @@ VSock* VSockServer::nextPendingConnection() {
 void VSockServer::close() {
     if(!m_listening)
         return;
+
+    for(auto client : m_clients) {
+        client->disconnect(this, nullptr);
+        client->deleteLater();
+    }
+
     m_listening = false;
     if(m_readNotifier){
         m_readNotifier->disconnect();
