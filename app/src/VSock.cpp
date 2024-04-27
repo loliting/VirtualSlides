@@ -49,6 +49,11 @@ bool VSock::connectToHost(uint32_t cid, uint32_t port) {
         this, &VSock::handleWriteAvaliable);
 
     m_connected = QIODevice::open(ReadWrite);
+    if(!m_connected)
+        close();
+    
+    emit connected();
+
     return m_connected;
 }
 
@@ -77,6 +82,8 @@ void VSock::close() {
         m_addr = nullptr;
     }
     
+    QIODevice::close();
+
     emit disconnected();
 }
 
