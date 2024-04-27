@@ -61,3 +61,5 @@ target_link_libraries(vs-sock-stdio-connector PRIVATE
     Qt5::Core
     Qt5::Network
 )
+
+add_subdirectory(tests)
