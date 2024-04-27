@@ -16,6 +16,8 @@ public:
     GuestBridge(VirtualMachine* vm);
     ~GuestBridge();
     
+    void start();
+    void stop();
 private:
     enum ResponseStatus {
         Ok,
@@ -26,6 +28,8 @@ private:
 private slots:
     void handleVmSockReadReady(VSock* sock);
 private:
+    bool m_started = false;
+
     VirtualMachine* m_vm = nullptr;
     
     VSockServer* m_server = nullptr;

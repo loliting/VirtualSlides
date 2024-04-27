@@ -344,22 +344,26 @@ void VirtualMachine::start() {
     m_vmProcess->setProgram("qemu-system-x86_64");
     m_vmProcess->setArguments(getArgs());
     m_vmProcess->start();
+
+    connect(m_vmProcess, &QProcess::started, m_guestBridge, &GuestBridge::start);
     connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(handleVmProcessFinished(int)));
 
     m_isRunning = true;
 }
 
 void VirtualMachine::handleVmProcessFinished(int exitCode) {
+    if(m_guestBridge){
+        m_guestBridge->stop();
+        m_guestBridge->deleteLater();
+    }
+    m_guestBridge = nullptr;
+
     if(m_consoleSocket){
         m_consoleSocket->disconnect();
         m_consoleSocket->deleteLater();
     }
     m_consoleSocket = nullptr;
     
-    if(m_guestBridge) {
-        m_guestBridge->deleteLater();
-    }
-    m_guestBridge = nullptr;
 
     for (auto termSock : m_terminalSockets) {
         termSock->close();
@@ -397,6 +401,13 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
 void VirtualMachine::stop() {
     if(!m_isRunning || !m_vmProcess)
         return;
+
+    if(m_guestBridge){
+        m_guestBridge->stop();
+        m_guestBridge->deleteLater();
+    }
+    m_guestBridge = nullptr;
+
     if(m_vmProcess->state() == QProcess::Running){
         m_vmProcess->terminate();
     }
@@ -422,6 +433,9 @@ void VirtualMachine::handleConsoleSockReadReady() {
 
 VirtualMachine::~VirtualMachine() {
     stop();
-    if(m_guestBridge)
+    if(m_guestBridge){
+        m_guestBridge->stop();
         m_guestBridge->deleteLater();
+    }
+    m_guestBridge = nullptr;
 }

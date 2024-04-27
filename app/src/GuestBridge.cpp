@@ -9,6 +9,16 @@ GuestBridge::GuestBridge(VirtualMachine* vm) : QObject(vm) {
     m_vm = vm;
 
     m_server = new VSockServer(this);
+}
+
+GuestBridge::~GuestBridge() {
+    stop();
+}
+
+void GuestBridge::start() {
+    if(m_started)
+        return;
+
     if(!m_server->listen(VSockServer::Host, m_vm->m_cid)){
         qWarning() << "VSockServer failed:" << m_server->errorString();
         return;
@@ -26,12 +36,18 @@ GuestBridge::GuestBridge(VirtualMachine* vm) : QObject(vm) {
         });
     });
 
+    m_started = true;
 }
 
-GuestBridge::~GuestBridge() {
+void GuestBridge::stop() {
+    if(!m_started)
+        return;
+    
+    m_server->close();
     if(m_server){
         m_server->deleteLater();
     }
+    m_started = false;
 }
 
 void GuestBridge::parseRequest(VSock* sock, QString request) {
@@ -56,7 +72,7 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         response.update(statusResponse(ResponseStatus::Ok));
     }
     else if(requestType == "download-test") {
-        response["download-test"] = std::string(1024 * 1024, 'a');
+        response["download-test"] = std::string(1024 * 1024 * 32, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
     else if(requestType == "hostname") {
