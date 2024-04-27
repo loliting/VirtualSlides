@@ -35,6 +35,21 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
         return false;
     }
 
+    const int reuseAddrEnabled = 1;
+    if(setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuseAddrEnabled, sizeof(int)) < 0){
+        m_err = errno;
+        m_errStr = strerror(m_err);
+        emit errorOccurred(m_err);
+        return false;
+    }
+
+    const int reusePortEnabled = 1;
+    if(setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &reusePortEnabled, sizeof(int)) < 0){
+        m_err = errno;
+        m_errStr = strerror(m_err);
+        emit errorOccurred(m_err);
+        return false;
+    }
 
     if(!VSock::setBlocking(m_sockfd, false)){
         m_err = errno;
@@ -91,8 +106,10 @@ void VSockServer::close() {
 
     for(auto client : m_clients) {
         client->disconnect(this, nullptr);
+        client->close();
         client->deleteLater();
     }
+    m_clients.clear();
 
     m_listening = false;
     if(m_readNotifier){
@@ -107,58 +124,56 @@ void VSockServer::close() {
 }
 
 bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
-    auto cleanUp = [=](bool didTimeOut) {
-        if(timedOut)
-            *timedOut = didTimeOut;
-        if(msec != 0){
-            m_readNotifier->setEnabled(true);
-            VSock::setBlocking(m_sockfd, false);
-        }
-    };
-
     if(!m_listening)
         return false;
-        
-    if(msec != 0){
-        VSock::setBlocking(m_sockfd, true);
-        m_readNotifier->setEnabled(false);
-    }
 
-    int fd = ::accept(m_sockfd, NULL, NULL);
-    
-    if(fd == -1){
-        cleanUp(errno == EAGAIN);
-        if(errno != EAGAIN){
+    QDeadlineTimer deadline(msec);
+
+    do{
+        int fd = ::accept(m_sockfd, NULL, NULL);
+        
+        if(fd == -1 && errno != EAGAIN){
+            if(timedOut)
+                *timedOut = false;
             m_err = errno;
             m_errStr = strerror(m_err);
             ::close(fd);
             emit errorOccurred(m_err);
+            return false;
         }
-        return false;
-    }
-    
-    VSock *sock = new VSock(this);
-    if(!sock->setFd(fd)){
-        m_err = errno;
-        m_errStr = strerror(m_err);
-        ::close(fd);
-        emit errorOccurred(m_err);
-        sock->deleteLater();
-        cleanUp(false);
-        return false;
-    }
 
-    connect(sock, &VSock::destroyed, this, [=] {
-        sock->disconnect(this, nullptr);
-        m_clients.remove(sock);
-        m_pendingConnection.removeAll(sock);
-    });
+        VSock *sock = new VSock(this);
+        if(!sock->setFd(fd)){
+            m_err = errno;
+            m_errStr = strerror(m_err);
+            ::close(fd);
+            emit errorOccurred(m_err);
+            sock->deleteLater();
+            if(timedOut)
+                *timedOut = false;
+            return false;
+        }
 
-    m_clients.insert(sock);
-    m_pendingConnection.enqueue(sock);
+        auto removeSock = [=] {
+            sock->disconnect(this, nullptr);
+            m_clients.remove(sock);
+            m_pendingConnection.removeAll(sock);
+        };
 
-    emit newConnection();
-    
-    cleanUp(false);
-    return true;
+        connect(sock, &VSock::destroyed, this, removeSock);
+        connect(sock, &VSock::disconnected, this, removeSock);
+
+        m_clients.insert(sock);
+        m_pendingConnection.enqueue(sock);
+
+        emit newConnection();
+            
+        if(timedOut)
+            *timedOut = false;
+        return true;
+    } while(!deadline.hasExpired()); 
+
+    if(timedOut)
+        *timedOut = deadline.hasExpired();
+    return false;
 }
