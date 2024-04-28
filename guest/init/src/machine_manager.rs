@@ -75,10 +75,10 @@ pub fn set_hostname() -> Result<()> {
     Ok(())
 }
 
-pub fn query_and_set_hostname() -> Result<()> {
+pub fn query_hostname() -> Result<()> {
     let mut hb = HostBridge::new()?;
 
-    let hostname = match hb.message_host(RequestType::Hostname)?.hostname {
+    let hostname = match hb.message_host(RequestType::GetHostname)?.hostname {
         Some(hostname) => hostname,
         None => String::new()
     };
@@ -92,8 +92,30 @@ pub fn query_and_set_hostname() -> Result<()> {
     
         hostname_file.write_all(hostname.as_bytes())?;
     }
+    Ok(())
+}
 
-    set_hostname()
+pub fn query_motd() -> Result<()> {
+    let mut hb = HostBridge::new()?;
+
+    let motd = match hb.message_host(RequestType::GetMotd)?.motd {
+        Some(motd) => motd,
+        None => String::new()
+    };
+    
+    dbg!(&motd);
+
+    if !motd.is_empty() {
+        let mut motd_file = File::options()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open("/etc/motd")?;
+    
+        motd_file.write_all(motd.as_bytes())?;
+        motd_file.write(b"\n")?;
+    }
+    Ok(())
 }
 
 pub fn mount_sys_dirs() -> Result<()> {

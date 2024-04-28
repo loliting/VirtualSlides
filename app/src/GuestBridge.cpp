@@ -75,8 +75,12 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         response["download-test"] = std::string(1024 * 1024 * 32, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "hostname") {
+    else if(requestType == "get-hostname") {
         response["hostname"] = m_vm->m_hostname.toStdString();
+        response.update(statusResponse(ResponseStatus::Ok));
+    }
+    else if(requestType == "get-motd") {
+        response["motd"] = m_vm->m_motd.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
     } 
     else {

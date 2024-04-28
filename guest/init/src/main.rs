@@ -45,15 +45,16 @@ fn main() -> Result<()> {
 
     if is_machine_initializated() {
         println!("Machine is initializated!");
-        set_hostname()?;
     } else {
         println!("Machine is not initializated!");
         
-        mount_sys_dirs()?;
-        query_and_set_hostname()?;
+        query_motd()?;
+        query_hostname()?;
 
         set_machine_initializated(true)?;
     }
+    mount_sys_dirs()?;
+    set_hostname()?;
 
 
     let env = [

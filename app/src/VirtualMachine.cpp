@@ -167,9 +167,12 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     xml_node<char>* initNode = vmNode->first_node("init", 0UL, false);
     if(initNode != nullptr){
         xml_node<char>* hostnameNode = initNode->first_node("hostname", 0UL, false);
-        if(hostnameNode != nullptr){
+        if(hostnameNode != nullptr)
             m_hostname = hostnameNode->value();
-        }
+
+        xml_node<char>* motdNode = initNode->first_node("motd", 0UL, false);
+        if(motdNode != nullptr)
+            m_motd = motdNode->value();
 
         m_dhcpClient = getXmlBoolValue(initNode, "dhcp-client", true);
 

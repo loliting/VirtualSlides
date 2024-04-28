@@ -92,6 +92,8 @@ private:
     DiskImage* m_diskImage;
 
     QString m_hostname;
+    QString m_motd;
+    
     bool m_dhcpClient = true;
     bool m_dhcpServer = false;
     QList<InstallFile> m_installFiles;

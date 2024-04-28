@@ -18,8 +18,10 @@ pub enum RequestType {
     Reboot,
     #[serde(rename = "download-test")] 
     DownloadTest,
-    #[serde(rename = "hostname")] 
-    Hostname,
+    #[serde(rename = "get-hostname")] 
+    GetHostname,
+    #[serde(rename = "get-motd")] 
+    GetMotd,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -36,6 +38,7 @@ pub struct Response {
     pub(in self) error: Option<String>,
 
     pub hostname: Option<String>,
+    pub motd: Option<String>,
 }
 
 impl HostBridge {
