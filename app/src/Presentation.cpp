@@ -229,15 +229,12 @@ void Presentation::parseRootXml() {
 
         bgAttribute = slideNode->first_attribute("bg", 0UL, false);
         if(bgAttribute){
-            if(isFileValid(bgAttribute->value())){
+            if(isFileValid(bgAttribute->value()))
                 slide = new PresentationSlide(QPixmap(getFilePath(bgAttribute->value())));
-            }
-            else if(QColor::isValidColor(bgAttribute->value())){
+            else if(QColor::isValidColorName(bgAttribute->value()))
                 slide = new PresentationSlide(QColor(bgAttribute->value()));
-            }
-            else{
+            else
                 slide = new PresentationSlide();
-            }
         }
         else{
             slide = new PresentationSlide();
