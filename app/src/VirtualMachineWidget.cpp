@@ -90,6 +90,12 @@ void VirtualMachineWidget::handleVmStopped() {
     m_stopButton->setEnabled(false);
     m_restartButton->setEnabled(false);
     m_startButton->setEnabled(true);
+
+    m_terminalCopyAction->deleteLater();
+    m_terminalPasteAction->deleteLater();
+
+    m_terminalZoomInAction->deleteLater();
+    m_terminalZoomOutAction->deleteLater();
 }
 
 void VirtualMachineWidget::handleVmStarted() {
@@ -98,6 +104,7 @@ void VirtualMachineWidget::handleVmStarted() {
     m_startButton->setEnabled(false);
 
     m_terminal->close();
+    m_terminal->setVisible(false);
     m_terminal->deleteLater();
 
     m_terminal = new QTermWidget(0, this);
@@ -106,5 +113,43 @@ void VirtualMachineWidget::handleVmStarted() {
     m_layout->addWidget(m_terminal, 1, 0, 1, 5);
     m_terminal->setShellProgram(Application::applicationDirPath() +  "/vs-sock-stdio-connector");
     m_terminal->setArgs(QStringList(m_vm->serverName()));
+    
+    m_terminalCopyAction = new QAction("Copy");
+    m_terminalPasteAction = new QAction("Paste");
+
+    m_terminalZoomInAction = new QAction("Zoom In");
+    m_terminalZoomOutAction = new QAction("Zoom Out");
+
+    m_terminalCopyAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    m_terminalPasteAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
+    
+    m_terminalZoomInAction->setShortcut(QKeySequence("Ctrl++"));
+    m_terminalZoomOutAction->setShortcut(QKeySequence("Ctrl+-"));
+
+    m_terminal->addAction(m_terminalCopyAction);
+    m_terminal->addAction(m_terminalPasteAction);
+
+    m_terminal->addAction(m_terminalZoomInAction);
+    m_terminal->addAction(m_terminalZoomOutAction);
+
+    connect(m_terminalCopyAction, &QAction::triggered,
+        m_terminal, &QTermWidget::copyClipboard
+    );
+    connect(m_terminalPasteAction, &QAction::triggered,
+        m_terminal, &QTermWidget::pasteClipboard
+    );
+
+    connect(m_terminalZoomInAction, &QAction::triggered, 
+        m_terminal, &QTermWidget::zoomIn
+    );
+    connect(m_terminalZoomOutAction, &QAction::triggered,
+        m_terminal, &QTermWidget::zoomOut
+    );
+
+
+    m_terminal->setConfirmMultilinePaste(false);
+
+    m_terminal->setContextMenuPolicy(Qt::ActionsContextMenu);
+
     m_terminal->startShellProgram();
 }

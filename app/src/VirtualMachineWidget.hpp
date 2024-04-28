@@ -29,6 +29,12 @@ private:
     QPushButton* m_stopButton = new QPushButton(QIcon(":/icons/stop.png"), "Stop", this);
     QPushButton* m_restartButton = new QPushButton(QIcon(":/icons/restart.png"), "Restart", this);
     QTermWidget* m_terminal = new QTermWidget(0, nullptr);
+
+    QAction* m_terminalPasteAction;
+    QAction* m_terminalCopyAction;
+
+    QAction* m_terminalZoomOutAction;
+    QAction* m_terminalZoomInAction;
 private slots:
     void handleNetworkChanged();
     void handleVmStopped();
