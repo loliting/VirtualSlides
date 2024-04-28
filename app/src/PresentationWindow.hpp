@@ -2,7 +2,7 @@
 #define PRESENTATIONWINDOW_HPP
 
 #include <QtWidgets/QMainWindow>
-#include <QtWidgets/QAction>
+#include <QtGui/QAction>
 
 #include "Presentation.hpp"
 

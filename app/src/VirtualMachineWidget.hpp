@@ -7,7 +7,7 @@
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QSpacerItem>
 
-#include <qtermwidget5/qtermwidget.h>
+#include <qtermwidget6/qtermwidget.h>
 
 class VirtualMachineWidget;
 

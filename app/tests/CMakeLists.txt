@@ -1,5 +1,5 @@
-find_package(Qt5Core ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(Qt5Test ${QT_MINIMUM_VERSION} REQUIRED)
+find_package(Qt6Core ${QT_MINIMUM_VERSION} REQUIRED)
+find_package(Qt6Test ${QT_MINIMUM_VERSION} REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -15,6 +15,6 @@ add_executable(tst_vsock
     ../src/VSock.cpp
 )
 
-target_link_libraries(tst_vsock PRIVATE Qt5::Test Qt5::Core)
+target_link_libraries(tst_vsock PRIVATE Qt6::Test Qt6::Core)
 
 add_test(NAME tst_vsock COMMAND tst_vsock)

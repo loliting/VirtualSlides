@@ -1,10 +1,10 @@
-set(QT_MINIMUM_VERSION "5.15.0")
+set(QT_MINIMUM_VERSION "6.6.0")
 
-find_package(Qt5Core ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(Qt5Widgets ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(Qt5Network ${QT_MINIMUM_VERSION} REQUIRED)
+find_package(Qt6Core ${QT_MINIMUM_VERSION} REQUIRED)
+find_package(Qt6Widgets ${QT_MINIMUM_VERSION} REQUIRED)
+find_package(Qt6Network ${QT_MINIMUM_VERSION} REQUIRED)
 
-find_package(QTermWidget5 REQUIRED)
+find_package(qtermwidget6 2.0 REQUIRED)
 
 find_package(libzip REQUIRED)
 
@@ -39,16 +39,16 @@ set(VS_SOURCES
     src/VSockServer.hpp
 )
 
-qt5_add_resources(VS_SOURCES Resources/res.qrc)
+qt6_add_resources(VS_SOURCES Resources/res.qrc)
 
 add_executable(virtual-slides ${VS_SOURCES} Resources/res.qrc)
 
 target_link_libraries(virtual-slides PRIVATE
-    Qt5::Core
-    Qt5::Gui
-    Qt5::Widgets
-    Qt5::Network
-    qtermwidget5
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Network
+    qtermwidget6
     libzip::zip
 )
 
@@ -58,8 +58,8 @@ target_compile_definitions(virtual-slides PRIVATE $<$<CONFIG:Debug>:DEBUG_BUILD=
 add_executable(vs-sock-stdio-connector src/SockStdioConnector.cpp src/SockStdioConnector.hpp)
 
 target_link_libraries(vs-sock-stdio-connector PRIVATE
-    Qt5::Core
-    Qt5::Network
+    Qt6::Core
+    Qt6::Network
 )
 
 add_subdirectory(tests)
