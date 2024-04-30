@@ -78,7 +78,7 @@ public:
     ~VirtualMachine();
 private:
     VirtualMachine(rapidxml::xml_node<char>* vmNode);
-    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
+    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image);
 
     void createImageFile();
     QString m_id;
@@ -94,8 +94,6 @@ private:
     QString m_hostname;
     QString m_motd;
     
-    bool m_dhcpClient = true;
-    bool m_dhcpServer = false;
     QList<InstallFile> m_installFiles;
 
     QList<FileObjective> m_fileObjectives;

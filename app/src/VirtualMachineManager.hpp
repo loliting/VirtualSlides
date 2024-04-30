@@ -17,7 +17,7 @@ public:
     VirtualMachineManager(QString vmsXmlPath);
     ~VirtualMachineManager();
     VirtualMachine* getVirtualMachine(QString id) const { return m_virtualMachines.value(id, nullptr); }
-    VirtualMachine* addVm(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image);
+    VirtualMachine* addVm(QString id, Network* net, bool hasSlirpNetDev, QString image);
 
     void setNetworkManager(NetworkManager* netManager);
 private:

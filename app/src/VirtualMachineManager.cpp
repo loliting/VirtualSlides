@@ -81,10 +81,8 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
     for(auto vm : m_virtualMachines){
         Network* net = netManager->getNetwork(vm->m_netId);
         if(net){
-            if(net->vm() == vm){
+            if(net->vm() == vm)
                 vm->m_hasSlirpNetDev = net->hasWan();
-                vm->m_dhcpServer = net->hasDhcpServerEnabled();
-            }
             vm->setNet(net);
             if(vm->m_hasSlirpNetDev)
                 vm->start();
@@ -97,10 +95,10 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
     }
 }
 
-VirtualMachine* VirtualMachineManager::addVm(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
+VirtualMachine* VirtualMachineManager::addVm(QString id, Network* net, bool hasSlirpNetDev, QString image){
     assert(m_virtualMachines.contains(id) == false);
 
-    VirtualMachine* vm = new VirtualMachine(id, net, hasSlirpNetDev, dhcpServer, image);
+    VirtualMachine* vm = new VirtualMachine(id, net, hasSlirpNetDev, image);
 
     m_virtualMachines[vm->m_id] = vm;
     

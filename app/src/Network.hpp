@@ -38,16 +38,12 @@ public:
     VirtualMachine* vm() const { return m_vm; }
     
     bool hasWan() const { return m_Wan; }
-    bool hasDhcpServerEnabled() const { return m_dhcpServerEnabled; }
-    QString subnet() const { return m_subnet; }
 private:
     uint16_t m_mcastPort;
     
     QString m_id;
-    QString m_subnet = "10.0.64.0/24";
     QString m_vmId;
     VirtualMachine* m_vm = nullptr;
-    bool m_dhcpServerEnabled = true;
     bool m_Wan = true;
 
     quint32 macAddressesCount = 1;

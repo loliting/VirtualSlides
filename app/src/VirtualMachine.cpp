@@ -174,8 +174,6 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
         if(motdNode != nullptr)
             m_motd = motdNode->value();
 
-        m_dhcpClient = getXmlBoolValue(initNode, "dhcp-client", true);
-
         xml_node<char>* installFileNode = initNode->first_node("install-file", 0UL, false);
         while(installFileNode != nullptr){
             InstallFile iF(installFileNode);
@@ -231,13 +229,12 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     createImageFile();
 }
 
-VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, bool dhcpServer, QString image){
+VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image){
     m_cid = cidCounter++;
     m_id = id;
     m_net = net;
     m_netId = net->id();
     m_hasSlirpNetDev = hasSlirpNetDev;
-    m_dhcpServer = dhcpServer;
     m_image = image;
     m_macAddress = m_net->generateNewMacAddress();
     m_hostname = m_id;

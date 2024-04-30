@@ -84,7 +84,7 @@ void NetworkManager::setVirtualMachineManager(VirtualMachineManager* vmManager){
         }
         else{
             net->m_vmId = QUuid::createUuid().toString();
-            net->m_vm = vmManager->addVm(net->m_vmId, net, net->m_Wan, net->m_dhcpServerEnabled, "Router");
+            net->m_vm = vmManager->addVm(net->m_vmId, net, net->m_Wan, "Router");
         }
     }
 }
