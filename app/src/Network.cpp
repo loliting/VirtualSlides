@@ -2,10 +2,14 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QChar>
 
 using namespace rapidxml;
 
-static uint32_t portCounter = 3000;
+static quint32 portCounter = 3000;
+static quint32 macAddressCounter = 0;
+
+const QString Network::macAddressOUI = QStringLiteral("12:34:56");
 
 
 static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool defaultValue){
@@ -47,15 +51,10 @@ Network::Network(rapidxml::xml_node<char>* networkNode){
 }
 
 QString Network::generateNewMacAddress() {
-    assert(macAddressesCount <= 0xFF);
+    assert(++macAddressCounter <= 0xFFFFFF);
 
-    QString lastByte = QString::number(macAddressesCount++, 16);
-    // normalize last byte to always take 2 characters
-    if(lastByte.length() == 1){
-        lastByte = "0" + lastByte;
-    }
-
-    return QString::number(0x1a, 16) + ":" + QString::number(0x2b, 16) + ":"
-         + QString::number(0x3c, 16) + ":" + QString::number(0x4d, 16) + ":"
-         + QString::number(0x5e, 16) + ":" + lastByte;
+    return (macAddressOUI + ":%1:%2:%3")
+        .arg((macAddressCounter & 0xFF0000) >> 16, 2, 16, (QChar)u'0')
+        .arg((macAddressCounter & 0x00FF00) >> 8, 2, 16, (QChar)u'0')
+        .arg(macAddressCounter & 0x0000FF, 2, 16, (QChar)u'0');
 }

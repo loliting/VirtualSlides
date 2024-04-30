@@ -5,6 +5,7 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QStringLiteral>
 
 #include <exception>
 
@@ -28,6 +29,9 @@ class Network : public QObject
 {
     Q_OBJECT
 public:
+    static const QString macAddressOUI;
+
+public:
     Network(rapidxml::xml_node<char>* networkNode);
 
     QString generateNewMacAddress();
@@ -45,8 +49,6 @@ private:
     QString m_vmId;
     VirtualMachine* m_vm = nullptr;
     bool m_Wan = true;
-
-    quint32 macAddressesCount = 1;
 
     friend class NetworkManager;
 };
