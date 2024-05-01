@@ -37,6 +37,10 @@ struct InstallFile
 
     QString hostPath;
     QString content;
+
+    mode_t perm = 0777;
+    uid_t owner = 0;
+    gid_t group = 0;
 };
 
 struct FileObjective

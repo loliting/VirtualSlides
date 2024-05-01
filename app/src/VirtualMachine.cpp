@@ -59,14 +59,46 @@ static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool d
 InstallFile::InstallFile(xml_node<char>* installFileNode){
     xml_node<char>* pathNode = installFileNode->first_node("path", 0UL, false);
     vmPath = pathNode->value();
+    
     xml_node<char>* contentNode = installFileNode->first_node("content", 0UL, false);
-    xml_attribute<char>* contentPathNode = nullptr;
-    if(contentNode != nullptr){
+    xml_attribute<char>* contentPathAttrib = nullptr;
+
+    xml_attribute<char>* ownerAttrib = installFileNode->first_attribute("owner", 0UL, false);
+    xml_attribute<char>* groupAttrib = installFileNode->first_attribute("group", 0UL, false);
+    xml_attribute<char>* permAttrib = installFileNode->first_attribute("perm", 0UL, false);
+
+    if(contentNode){
         content = contentNode->value();
-        contentPathNode = contentNode->first_attribute("path", 0UL, false);
+        contentPathAttrib = contentNode->first_attribute("path", 0UL, false);
+        if(contentPathAttrib)
+            hostPath = contentPathAttrib->value();
     }
-    if(contentPathNode != nullptr){
-        hostPath = contentPathNode->value();
+
+    if(ownerAttrib) {
+        bool ok = false;
+        owner = QString(ownerAttrib->value()).toUInt(&ok);
+        if(!ok){
+            owner = 0;
+            qWarning("vms.xml: owner attribute value is not valid (%s)", ownerAttrib->value());
+        }
+    }
+
+    if(groupAttrib) {
+        bool ok = false;
+        group = QString(groupAttrib->value()).toUInt(&ok);
+        if(!ok){
+            group = 0;
+            qWarning("vms.xml: group attribute value is not valid (%s)", groupAttrib->value());
+        }
+    }
+    
+    if(permAttrib) {
+        bool ok = false;
+        perm = QString(permAttrib->value()).toUInt(&ok, 8);
+        if(!ok || group > 0777){
+            group = 0;
+            qWarning("vms.xml: perm attribute value is not valid (%s)", permAttrib->value());
+        }
     }
 }
 
