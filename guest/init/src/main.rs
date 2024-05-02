@@ -52,6 +52,7 @@ fn main() -> Result<()> {
         query_hostname()?;
 
         set_machine_initializated(true)?;
+        install_files()?;
     }
     mount_sys_dirs()?;
     set_hostname()?;

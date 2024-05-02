@@ -1,5 +1,7 @@
 // Module for talking with the host
 
+mod install_file;
+
 use std::io::{BufRead, BufReader, Write};
 use std::time::{Duration, Instant};
 use anyhow::{anyhow, Result};
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use indicatif::{HumanBytes, ProgressBar};
 use vsock::{get_local_cid, VsockAddr, VsockStream};
 
+pub use install_file::InstallFile;
 
 pub struct HostBridge {
     stream: VsockStream
@@ -22,6 +25,8 @@ pub enum RequestType {
     GetHostname,
     #[serde(rename = "get-motd")] 
     GetMotd,
+    #[serde(rename = "get-install-files")] 
+    GetInstallFiles,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -39,6 +44,8 @@ pub struct Response {
 
     pub hostname: Option<String>,
     pub motd: Option<String>,
+    #[serde(rename = "install-files")] 
+    pub install_files: Option<Vec<InstallFile>>
 }
 
 impl HostBridge {
@@ -55,7 +62,7 @@ impl HostBridge {
         let mut reader = BufReader::new(&self.stream);
         reader.read_until(b'\x1e', &mut buf)?;
         buf.pop();
-        
+
         Ok(buf)
     }
 

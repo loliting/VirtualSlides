@@ -1,5 +1,7 @@
-use std::fs::File;
+use std::fs::{File, Permissions};
 use std::io::{ErrorKind, Read, Write};
+use std::os::unix::fs::{chown, PermissionsExt};
+use std::path::Path;
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
 use nix::mount::{mount, MsFlags};
@@ -134,5 +136,32 @@ pub fn mount_sys_dirs() -> Result<()> {
     std::fs::create_dir_all("/sys")?;
     mount::<str, str, str, str>(None, "/sys", Some("sysfs"), MsFlags::empty(), None)?;
     
+    Ok(())
+}
+
+pub fn install_files() -> Result<()> {
+    let mut hb = HostBridge::new()?;
+
+    let files = match hb.message_host(RequestType::GetInstallFiles)?.install_files {
+        Some(install_files) => install_files,
+        None => {
+            return Ok(())
+        }
+    };
+
+    for install_file in files {
+        let path = Path::new(&install_file.path);
+        std::fs::create_dir_all(path.parent().unwrap_or(Path::new("/")))?;
+        let mut file = File::options()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+        file.write_all(install_file.content.as_bytes())?;
+
+        chown(path, Some(install_file.uid), Some(install_file.gid))?;
+        file.set_permissions(Permissions::from_mode(install_file.perm))?;
+    }
+
     Ok(())
 }
