@@ -39,7 +39,7 @@ struct InstallFile
 
     QString content;
 
-    mode_t perm = 0777;
+    mode_t perm = 0640;
     uid_t owner = 0;
     gid_t group = 0;
 };
