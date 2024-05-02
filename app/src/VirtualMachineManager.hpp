@@ -14,7 +14,7 @@ class VirtualMachineManager : public QObject
 {
     Q_OBJECT
 public:
-    VirtualMachineManager(QString vmsXmlPath);
+    VirtualMachineManager(QString vmsXmlPath, Presentation* pres);
     ~VirtualMachineManager();
     VirtualMachine* getVirtualMachine(QString id) const { return m_virtualMachines.value(id, nullptr); }
     VirtualMachine* addVm(QString id, Network* net, bool hasSlirpNetDev, QString image);
@@ -23,6 +23,8 @@ public:
 private:
     QMap<QString, VirtualMachine*> m_virtualMachines;
     NetworkManager* m_netManager = nullptr;
+
+    Presentation* m_presentation;
 };
 
 #endif // VIRTUALMACHINEMANAGER_HPP

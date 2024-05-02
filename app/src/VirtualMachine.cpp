@@ -56,7 +56,7 @@ static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool d
     return getBool(node->value(), defaultValue);
 }
 
-InstallFile::InstallFile(xml_node<char>* installFileNode){
+InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
     xml_node<char>* pathNode = installFileNode->first_node("path", 0UL, false);
     vmPath = pathNode->value();
     
@@ -70,8 +70,18 @@ InstallFile::InstallFile(xml_node<char>* installFileNode){
     if(contentNode){
         content = contentNode->value();
         contentPathAttrib = contentNode->first_attribute("path", 0UL, false);
-        if(contentPathAttrib)
+        if(contentPathAttrib){
             hostPath = contentPathAttrib->value();
+            if(pres->isFileValid(hostPath)){
+                QFile file = QFile(pres->getFilePath(hostPath));
+                if(file.open(QIODevice::ReadOnly))
+                    content = file.readAll();
+                else
+                    qWarning("vms.xml: Failed to open %s.", contentPathAttrib->value());
+            }
+            else
+                qWarning("vms.xml: install-file's content path argument exist, but it's not valid.");
+        }
     }
 
     if(ownerAttrib) {
@@ -174,7 +184,7 @@ CommandObjective::CommandObjective(xml_node<char>* runCommandNode){
     }
 }
 
-VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
+VirtualMachine::VirtualMachine(xml_node<char>* vmNode, Presentation* pres) : m_presentation(pres) {
     xml_attribute<char>* idAttrib = vmNode->first_attribute("id", 0UL, false);
     if(idAttrib == nullptr){
         throw VirtualMachineException("<VM> node does not contain id attribute.");
@@ -208,7 +218,7 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
 
         xml_node<char>* installFileNode = initNode->first_node("install-file", 0UL, false);
         while(installFileNode != nullptr){
-            InstallFile iF(installFileNode);
+            InstallFile iF(installFileNode, m_presentation);
             if(iF.vmPath.isEmpty()){
                 qWarning() << "<install-file> node must have valid <path> subnode. Ignoring objective.";
             }
@@ -261,7 +271,7 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode){
     createImageFile();
 }
 
-VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image){
+VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres) : m_presentation(pres) {
     m_cid = cidCounter++;
     m_id = id;
     m_net = net;

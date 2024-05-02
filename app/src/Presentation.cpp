@@ -115,7 +115,7 @@ void PresentationSlide::resizeEvent(QResizeEvent *event) {
     QLabel::resizeEvent(event);
 }
 
-void Presentation::decompressVslidesArchive(QString path) {
+void Presentation::decompressArchive(QString path) {
     zip_t* zipArchive = nullptr;
     zip_file_t* zf;
     zip_stat_t zStat;
@@ -325,8 +325,8 @@ Presentation::Presentation(QString path) {
     }
 
     try{
-        decompressVslidesArchive(path);
-        m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"));
+        decompressArchive(path);
+        m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"), this);
         m_netManager = new NetworkManager(getFilePath("nets.xml"));
         m_netManager->setVirtualMachineManager(m_vmManager);
         m_vmManager->setNetworkManager(m_netManager);

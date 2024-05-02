@@ -88,14 +88,14 @@ protected:
 };
 
 
-struct Presentation{
+struct Presentation {
 public:
     Presentation(QString path);
     ~Presentation();
     bool isFileValid(QString path);
     QString getFilePath(QString path);
 private:
-    void decompressVslidesArchive(QString path);
+    void decompressArchive(QString path);
     void parseRootXml();
 public:
     QString m_title;

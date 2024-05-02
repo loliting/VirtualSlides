@@ -20,6 +20,8 @@ class VirtualMachine;
 #include "Config.hpp"
 #include "GuestBridge.hpp"
 
+class Presentation;
+
 class VirtualMachineException : public std::exception
 {
 public:
@@ -32,7 +34,7 @@ private:
 
 struct InstallFile
 {
-    InstallFile(rapidxml::xml_node<char>* installFileNode);
+    InstallFile(rapidxml::xml_node<char>* installFileNode, Presentation* pres);
     QString vmPath;
 
     QString hostPath;
@@ -81,8 +83,8 @@ public:
     void setNet(Network* net);
     ~VirtualMachine();
 private:
-    VirtualMachine(rapidxml::xml_node<char>* vmNode);
-    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image);
+    VirtualMachine(rapidxml::xml_node<char>* vmNode, Presentation* pres);
+    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres);
 
     void createImageFile();
     QString m_id;
@@ -118,6 +120,8 @@ private:
 
     GuestBridge* m_guestBridge = nullptr;
     uint32_t m_cid;
+
+    Presentation* m_presentation;
 signals:
     void networkChanged();
     void vmStarted();

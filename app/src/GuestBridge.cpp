@@ -50,6 +50,17 @@ void GuestBridge::stop() {
     m_started = false;
 }
 
+static json installFileToJson(InstallFile* installFile){
+    json json;
+    json["content"] = installFile->content.toStdString();
+    json["path"] = installFile->vmPath.toStdString();
+    json["uid"] = installFile->owner;
+    json["gid"] = installFile->group;
+    json["perm"] = installFile->perm;
+
+    return json;
+}
+
 void GuestBridge::parseRequest(VSock* sock, QString request) {
     std::string requestType;
     json response;
@@ -81,6 +92,14 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
     }
     else if(requestType == "get-motd") {
         response["motd"] = m_vm->m_motd.toStdString();
+        response.update(statusResponse(ResponseStatus::Ok));
+    } 
+    else if(requestType == "get-install-files") {
+        std::vector<json> installFiles;
+        for(auto installFile : m_vm->m_installFiles)
+            installFiles.push_back(installFileToJson(&installFile));
+        
+        response["install-files"] = installFiles;
         response.update(statusResponse(ResponseStatus::Ok));
     } 
     else {

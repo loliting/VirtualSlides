@@ -9,7 +9,7 @@
 
 using namespace rapidxml;
 
-VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
+VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath, Presentation* pres) : m_presentation(pres) {
     QFile vmsXml(vmsXmlPath);
 
     if(vmsXml.open(QIODevice::ReadOnly) == false){
@@ -44,13 +44,12 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
         }
         VirtualMachine* vm = nullptr;
         try{
-            vm = new VirtualMachine(vmNode);
-            if(vm->m_id.isEmpty()){
+            vm = new VirtualMachine(vmNode, m_presentation);
+            if(vm->m_id.isEmpty())
                 throw VirtualMachineException("Specified vm id is not valid.");
-            }
-            if(m_virtualMachines.contains(vm->m_id)){
+            if(m_virtualMachines.contains(vm->m_id))
                 throw VirtualMachineException("Virtual machine with ID: " + vm->m_id + " already exist.");
-            }
+
             m_virtualMachines[vm->m_id] = vm;
         }
         catch(VirtualMachineException &e){
@@ -67,9 +66,8 @@ VirtualMachineManager::VirtualMachineManager(QString vmsXmlPath) {
 }
 
 VirtualMachineManager::~VirtualMachineManager(){
-    for(auto vm : m_virtualMachines){
-        delete vm;
-    }
+    for(auto vm : m_virtualMachines)
+        vm->deleteLater();
 }
 
 void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
@@ -98,7 +96,7 @@ void VirtualMachineManager::setNetworkManager(NetworkManager* netManager){
 VirtualMachine* VirtualMachineManager::addVm(QString id, Network* net, bool hasSlirpNetDev, QString image){
     assert(m_virtualMachines.contains(id) == false);
 
-    VirtualMachine* vm = new VirtualMachine(id, net, hasSlirpNetDev, image);
+    VirtualMachine* vm = new VirtualMachine(id, net, hasSlirpNetDev, image, m_presentation);
 
     m_virtualMachines[vm->m_id] = vm;
     
