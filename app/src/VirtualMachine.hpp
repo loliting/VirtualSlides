@@ -37,7 +37,6 @@ struct InstallFile
     InstallFile(rapidxml::xml_node<char>* installFileNode, Presentation* pres);
     QString vmPath;
 
-    QString hostPath;
     QString content;
 
     mode_t perm = 0777;

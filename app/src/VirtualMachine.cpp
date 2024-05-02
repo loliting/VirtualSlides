@@ -71,9 +71,8 @@ InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
         content = contentNode->value();
         contentPathAttrib = contentNode->first_attribute("path", 0UL, false);
         if(contentPathAttrib){
-            hostPath = contentPathAttrib->value();
-            if(pres->isFileValid(hostPath)){
-                QFile file = QFile(pres->getFilePath(hostPath));
+            if(pres->isFileValid(contentPathAttrib->value())){
+                QFile file = QFile(pres->getFilePath(contentPathAttrib->value()));
                 if(file.open(QIODevice::ReadOnly))
                     content = file.readAll();
                 else
@@ -105,8 +104,8 @@ InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
     if(permAttrib) {
         bool ok = false;
         perm = QString(permAttrib->value()).toUInt(&ok, 8);
-        if(!ok || group > 0777){
-            group = 0;
+        if(!ok || perm > 0777){
+            perm = 0;
             qWarning("vms.xml: perm attribute value is not valid (%s)", permAttrib->value());
         }
     }
