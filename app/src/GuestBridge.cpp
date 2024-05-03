@@ -82,24 +82,24 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         m_vm->m_shouldRestart = true;
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "download-test") {
-        response["download-test"] = std::string(1024 * 1024 * 32, 'a');
+    else if(requestType == "downloadTest") {
+        response["downloadTest"] = std::string(1024 * 1024 * 32, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "get-hostname") {
+    else if(requestType == "getHostname") {
         response["hostname"] = m_vm->m_hostname.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "get-motd") {
+    else if(requestType == "getMotd") {
         response["motd"] = m_vm->m_motd.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
     } 
-    else if(requestType == "get-install-files") {
+    else if(requestType == "getInstallFiles") {
         std::vector<json> installFiles;
         for(auto installFile : m_vm->m_installFiles)
             installFiles.push_back(installFileToJson(&installFile));
         
-        response["install-files"] = installFiles;
+        response["installFiles"] = installFiles;
         response.update(statusResponse(ResponseStatus::Ok));
     } 
     else {
