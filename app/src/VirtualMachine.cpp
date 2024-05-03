@@ -68,13 +68,16 @@ InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
     xml_attribute<char>* permAttrib = installFileNode->first_attribute("perm", 0UL, false);
 
     if(contentNode){
-        content = contentNode->value();
+        std::string contentString = contentNode->value();
+        content = std::vector<uint8_t>(contentString.begin(), contentString.end());
         contentPathAttrib = contentNode->first_attribute("path", 0UL, false);
         if(contentPathAttrib){
             if(pres->isFileValid(contentPathAttrib->value())){
                 QFile file = QFile(pres->getFilePath(contentPathAttrib->value()));
-                if(file.open(QIODevice::ReadOnly))
-                    content = file.readAll();
+                if(file.open(QIODevice::ReadOnly)){
+                    QByteArray ba = file.readAll();
+                    content = std::vector<uint8_t>(ba.begin(), ba.end());
+                }
                 else
                     qWarning("vms.xml: Failed to open %s.", contentPathAttrib->value());
             }

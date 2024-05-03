@@ -157,7 +157,7 @@ pub fn install_files() -> Result<()> {
             .create(true)
             .truncate(true)
             .open(path)?;
-        file.write_all(install_file.content.as_bytes())?;
+        file.write_all(&install_file.content)?;
 
         chown(path, Some(install_file.uid), Some(install_file.gid))?;
         file.set_permissions(Permissions::from_mode(install_file.perm))?;

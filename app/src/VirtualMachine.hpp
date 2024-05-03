@@ -37,7 +37,7 @@ struct InstallFile
     InstallFile(rapidxml::xml_node<char>* installFileNode, Presentation* pres);
     QString vmPath;
 
-    QString content;
+    std::vector<uint8_t> content;
 
     mode_t perm = 0640;
     uid_t owner = 0;

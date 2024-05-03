@@ -52,7 +52,7 @@ void GuestBridge::stop() {
 
 static json installFileToJson(InstallFile* installFile){
     json json;
-    json["content"] = installFile->content.toStdString();
+    json["content"] = installFile->content;
     json["path"] = installFile->vmPath.toStdString();
     json["uid"] = installFile->owner;
     json["gid"] = installFile->group;
