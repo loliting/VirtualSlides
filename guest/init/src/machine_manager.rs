@@ -1,7 +1,5 @@
-use std::fs::{File, Permissions};
+use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
-use std::os::unix::fs::{chown, PermissionsExt};
-use std::path::Path;
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
 use nix::mount::{mount, MsFlags};
@@ -149,18 +147,8 @@ pub fn install_files() -> Result<()> {
         }
     };
 
-    for install_file in files {
-        let path = Path::new(&install_file.path);
-        std::fs::create_dir_all(path.parent().unwrap_or(Path::new("/")))?;
-        let mut file = File::options()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)?;
-        file.write_all(&install_file.content)?;
-
-        chown(path, Some(install_file.uid), Some(install_file.gid))?;
-        file.set_permissions(Permissions::from_mode(install_file.perm))?;
+    for mut file in files {
+        file.install()?;
     }
 
     Ok(())
