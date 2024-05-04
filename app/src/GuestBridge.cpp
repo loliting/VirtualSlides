@@ -93,13 +93,24 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
     else if(requestType == "getMotd") {
         response["motd"] = m_vm->m_motd.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
-    } 
+    }
     else if(requestType == "getInstallFiles") {
         std::vector<json> installFiles;
         for(auto installFile : m_vm->m_installFiles)
             installFiles.push_back(installFileToJson(&installFile));
         
         response["installFiles"] = installFiles;
+        response.update(statusResponse(ResponseStatus::Ok));
+    }
+    else if(requestType == "getInitScripts") {
+        std::vector<json> initScripts;
+        for(auto initScript : m_vm->m_initScripts){
+            json json;
+            json["content"] = initScript.content;
+            initScripts.push_back(json);
+        }
+
+        response["initScripts"] = initScripts;
         response.update(statusResponse(ResponseStatus::Ok));
     } 
     else {

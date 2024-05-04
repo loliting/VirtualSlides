@@ -95,7 +95,7 @@ pub fn query_hostname() -> Result<()> {
     Ok(())
 }
 
-pub fn query_motd() -> Result<()> {
+pub fn set_motd() -> Result<()> {
     let mut hb = HostBridge::new()?;
 
     let motd = match hb.message_host(RequestType::GetMotd)?.motd {
@@ -103,8 +103,6 @@ pub fn query_motd() -> Result<()> {
         None => String::new()
     };
     
-    dbg!(&motd);
-
     if !motd.is_empty() {
         let mut motd_file = File::options()
             .write(true)
@@ -149,6 +147,23 @@ pub fn install_files() -> Result<()> {
 
     for mut file in files {
         file.install()?;
+    }
+
+    Ok(())
+}
+
+pub fn exec_init_scripts() -> Result<()> {
+    let mut hb = HostBridge::new()?;
+
+    let init_scripts = match hb.message_host(RequestType::GetInitScripts)?.init_scripts {
+        Some(init_scripts) => init_scripts,
+        None => {
+            return Ok(())
+        }
+    };
+
+    for mut init_script in init_scripts {
+        init_script.exec()?;
     }
 
     Ok(())

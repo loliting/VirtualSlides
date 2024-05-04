@@ -44,6 +44,13 @@ struct InstallFile
     gid_t group = 0;
 };
 
+struct InitScript
+{
+    InitScript(rapidxml::xml_node<char>* initScriptNode, Presentation* pres);
+    
+    std::vector<uint8_t> content;
+};
+
 struct FileObjective
 {
     FileObjective(rapidxml::xml_node<char>* fileNode);
@@ -100,6 +107,7 @@ private:
     QString m_motd;
     
     QList<InstallFile> m_installFiles;
+    QList<InitScript> m_initScripts;
 
     QList<FileObjective> m_fileObjectives;
     QList<CommandObjective> m_commandObjectives;

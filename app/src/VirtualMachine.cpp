@@ -56,7 +56,9 @@ static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool d
     return getBool(node->value(), defaultValue);
 }
 
-InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
+InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres) {
+    assert(installFileNode);
+
     xml_node<char>* pathNode = installFileNode->first_node("path", 0UL, false);
     vmPath = pathNode->value();
     
@@ -111,6 +113,30 @@ InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres){
             perm = 0640;
             qWarning("vms.xml: perm attribute value is not valid (%s)", permAttrib->value());
         }
+    }
+}
+
+InitScript::InitScript(rapidxml::xml_node<char>* initScriptNode, Presentation* pres) {
+    assert(initScriptNode);
+
+    xml_attribute<char>* pathAttrib = initScriptNode->first_attribute("path", 0UL, false);
+
+    if(pathAttrib){
+        if(pres->isFileValid(pathAttrib->value())){
+            QFile file = QFile(pres->getFilePath(pathAttrib->value()));
+            if(file.open(QIODevice::ReadOnly)){
+                QByteArray ba = file.readAll();
+                content = std::vector<uint8_t>(ba.begin(), ba.end());
+            }
+            else
+                qWarning("vms.xml: Failed to open %s.", pathAttrib->value());
+        }
+        else
+            qWarning("vms.xml: init-script's path argument exist, but it's not valid.");
+    }
+    else {
+        std::string contentStr = initScriptNode->value();
+        content = std::vector<uint8_t>(contentStr.begin(), contentStr.end());
     }
 }
 
@@ -220,16 +246,21 @@ VirtualMachine::VirtualMachine(xml_node<char>* vmNode, Presentation* pres) : m_p
 
         xml_node<char>* installFileNode = initNode->first_node("install-file", 0UL, false);
         while(installFileNode != nullptr){
-            InstallFile iF(installFileNode, m_presentation);
-            if(iF.vmPath.isEmpty()){
+            InstallFile installFile(installFileNode, m_presentation);
+            if(installFile.vmPath.isEmpty())
                 qWarning() << "<install-file> node must have valid <path> subnode. Ignoring objective.";
-            }
-            else{
-                m_installFiles.append(iF);
-            }
+            else
+                m_installFiles.append(installFile);
             installFileNode = installFileNode->next_sibling("install-file", 0UL, false);
         }
 
+        xml_node<char>* initScriptNode = initNode->first_node("init-script", 0UL, false);
+        while(initScriptNode != nullptr){
+            InitScript initScript(initScriptNode, m_presentation);
+            m_initScripts.append(initScript);
+
+            initScriptNode = initScriptNode->next_sibling("init-script", 0UL, false);
+        }
     }
 
     xml_node<char>* objectivesNode = vmNode->first_node("objectives", 0UL, false);

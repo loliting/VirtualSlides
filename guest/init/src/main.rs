@@ -48,11 +48,12 @@ fn main() -> Result<()> {
     } else {
         println!("Machine is not initializated!");
         
-        query_motd()?;
+        set_motd()?;
         query_hostname()?;
 
         set_machine_initializated(true)?;
         install_files()?;
+        exec_init_scripts()?;
     }
     mount_sys_dirs()?;
     set_hostname()?;

@@ -1,15 +1,21 @@
 // Module for talking with the host
 
 mod install_file;
+mod init_script;
 
 use std::io::{BufRead, BufReader, Write};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use indicatif::{HumanBytes, ProgressBar};
+use indicatif::ProgressBar;
+#[cfg(debug_assertions)]
+use indicatif::HumanBytes;
 use vsock::{get_local_cid, VsockAddr, VsockStream};
 
 pub use install_file::InstallFile;
+pub use init_script::InitScript;
 
 pub struct HostBridge {
     stream: VsockStream
@@ -23,6 +29,7 @@ pub enum RequestType {
     GetHostname,
     GetMotd,
     GetInstallFiles,
+    GetInitScripts,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -41,7 +48,8 @@ pub struct Response {
 
     pub hostname: Option<String>,
     pub motd: Option<String>,
-    pub install_files: Option<Vec<InstallFile>>
+    pub install_files: Option<Vec<InstallFile>>,
+    pub init_scripts: Option<Vec<InitScript>>,
 }
 
 impl HostBridge {
@@ -60,6 +68,7 @@ impl HostBridge {
     }
     
     fn read(&mut self) -> Result<Response> {
+        #[cfg(debug_assertions)]
         let now = Instant::now();
         let progress_bar = ProgressBar::new_spinner();
         
@@ -76,14 +85,18 @@ impl HostBridge {
         if response.status == Status::Err {
             return Err(anyhow!(response.error.unwrap_or_default()));
         }
-        let bytes_recived: u32 = buf.len() as u32;
-        let speed = bytes_recived as f64 / now.elapsed().as_secs_f64();
-
-        println!("Read {} in: {:.2?} ({}/s)",
-            HumanBytes(bytes_recived as u64),
-            now.elapsed(),
-            HumanBytes(speed as u64)
-        );
+        
+        #[cfg(debug_assertions)]
+        {
+            let bytes_recived: u32 = buf.len() as u32;
+            let speed = bytes_recived as f64 / now.elapsed().as_secs_f64();
+            
+            println!("Read {} in: {:.2?} ({}/s)",
+                HumanBytes(bytes_recived as u64),
+                now.elapsed(),
+                HumanBytes(speed as u64)
+            );
+        }
 
         Ok(response)
     }
