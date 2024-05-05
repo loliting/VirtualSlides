@@ -1,0 +1,23 @@
+{
+    "images": [
+        {
+            "imageName": "Debian bookworm",
+            "initSys": "/lib/systemd/systemd",
+            "path": "debian-12.qcow2"
+        },
+        {
+            "imageName": "Alpine",
+            "initSys": "/sbin/init",
+            "path": "alpine.qcow2"
+        },
+        {
+            "imageName": "Router",
+            "initSys": "/lib/systemd/systemd",
+            "path": "router.qcow2"
+        }
+    ],
+    "guestMemory": 512,
+    "guestProcCount": 2,
+    "kernelPath": "bzImage",
+    "kvmEnabled": true
+}

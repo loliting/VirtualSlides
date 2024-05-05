@@ -24,10 +24,9 @@ bool Config::m_kvmEnabled = true;
 bool Config::m_kvmEnabled = false;
 #endif
 
-void Config::Initializate() {
+void Config::Initializate(QString configJsonPath) {
     assert(m_initializated == false);
 
-    QString configJsonPath = Application::applicationDirPath() + "/Config.json";
     QFile configJsonFile(configJsonPath);
     
     if(configJsonFile.open(QIODevice::ReadOnly) == false){

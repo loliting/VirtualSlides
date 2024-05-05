@@ -3,6 +3,7 @@
 
 #include <QtCore/QString>
 #include <QtCore/QMap>
+#include <QtWidgets/QApplication>
 
 #include <exception>
 
@@ -26,7 +27,8 @@ struct DiskImage
 class Config
 {
 public:
-    static void Initializate();
+    static void Initializate(QString configJsonPath = QApplication::applicationDirPath() + "/Config.jsonc");
+
     static void CleanUp();
     static DiskImage* getDiskImage(QString name);
     static size_t getGuestMemSize();
