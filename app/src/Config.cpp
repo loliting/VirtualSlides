@@ -40,7 +40,7 @@ void Config::Initializate() {
     json configJson;
     
     try{
-        configJson = json::parse(ba.data());
+        configJson = json::parse(ba.data(), nullptr, true, true);
     }
     catch(json::exception &e){
         QString exceptionStr = "Failed to parse \"" + configJsonPath + "\": ";
