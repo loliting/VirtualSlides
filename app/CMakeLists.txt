@@ -1,4 +1,4 @@
-set(QT_MINIMUM_VERSION "6.6.0")
+set(QT_MINIMUM_VERSION "6.5.0")
 
 find_package(Qt6Core ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6Widgets ${QT_MINIMUM_VERSION} REQUIRED)
@@ -19,14 +19,10 @@ set(VS_SOURCES
     src/PresentationWindow.hpp
     src/Presentation.cpp
     src/Presentation.hpp
-    src/VirtualMachineManager.cpp
-    src/VirtualMachineManager.hpp
     src/VirtualMachine.cpp
     src/VirtualMachine.hpp
     src/Network.cpp
     src/Network.hpp
-    src/NetworkManager.cpp
-    src/NetworkManager.hpp
     src/Config.hpp
     src/Config.cpp
     src/GuestBridge.hpp

@@ -4,49 +4,26 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QChar>
 
-using namespace rapidxml;
+using namespace nlohmann;
 
 static quint32 portCounter = 3000;
 static quint32 macAddressCounter = 0;
 
 const QString Network::macAddressOUI = QStringLiteral("12:34:56");
 
+Network::Network(json &netObject) {
+    m_id = QString::fromStdString(netObject["id"]);
+    
+    if(netObject.contains("vmId"))
+        m_vmId = QString::fromStdString(netObject["vmId"]);
+    else
+        m_vmId = nullptr;
+    
+    if(netObject.contains("wan"))
+        m_wan = netObject["wan"];
+    else
+        m_wan = false;
 
-static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool defaultValue){
-    if(parentNode == nullptr){
-        return defaultValue;
-    }
-
-    xml_node<char>* node = parentNode->first_node(name, 0UL, false);
-    if(node == nullptr){
-        return defaultValue;
-    }
-
-    if(QString(node->value()).toLower() == "true"){
-        return true;
-    }
-    else if(QString(node->value()).toLower() == "false"){
-        return false;
-    }
-    else{
-        return defaultValue;
-    }
-}
-
-Network::Network(rapidxml::xml_node<char>* networkNode){
-    xml_attribute<char>* idAttr = networkNode->first_attribute("id", 0UL, false);
-
-    if(idAttr == nullptr){
-        throw NetworkException("<Net> node does not contain id attribute.");
-    }
-    m_id = idAttr->value();
-
-    xml_node<char>* vmIdNode = networkNode->first_node("vm-id", 0UL, false);
-    if(vmIdNode != nullptr){
-        m_vmId = vmIdNode->value();
-    }
-
-    m_Wan = getXmlBoolValue(networkNode, "WAN", true);
     m_mcastPort = portCounter++;
 }
 

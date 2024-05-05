@@ -8,8 +8,10 @@
 
 #include <exception>
 
-#include "VirtualMachineManager.hpp"
-#include "NetworkManager.hpp"
+#include "third-party/nlohmann/json.hpp"
+
+class VirtualMachine;
+class Network;
 
 class PresentationException : public std::exception
 {
@@ -92,18 +94,25 @@ struct Presentation {
 public:
     Presentation(QString path);
     ~Presentation();
+
     bool isFileValid(QString path);
     QString getFilePath(QString path);
+
+    VirtualMachine* getVirtualMachine(QString id) const { return m_virtualMachines.value(id, nullptr); }
+    Network* getNetwork(QString id) const { return m_networks.value(id, nullptr); }
 private:
     void decompressArchive(QString path);
     void parseRootXml();
+    void parseVirtEnvJsonc();
+    void parseVirtualMachines(nlohmann::json &vmsObj);
+    void parseNetworks(nlohmann::json &networksObj);
 public:
     QString m_title;
     QList<PresentationSlide*> m_slides;
 private:
     QTemporaryDir m_tmpDir;
-    VirtualMachineManager* m_vmManager = nullptr;
-    NetworkManager* m_netManager = nullptr;
+    QMap<QString, VirtualMachine*> m_virtualMachines;
+    QMap<QString, Network*> m_networks;
 };
 
 #endif // PRESENTATION_HPP

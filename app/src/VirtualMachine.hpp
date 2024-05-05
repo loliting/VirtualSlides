@@ -8,25 +8,23 @@
 #include <QtCore/QProcess>
 #include <QtNetwork/QLocalSocket>
 #include <QtNetwork/QLocalServer>
+#include <QtCore/QUuid>
 
 #include <exception>
 
-#include "third-party/RapidXml/rapidxml.hpp"
+#include "third-party/nlohmann/json.hpp"
 
-class VirtualMachine;
 
-#include "Network.hpp"
-#include "VirtualMachineWidget.hpp"
 #include "Config.hpp"
-#include "GuestBridge.hpp"
 
+class Network;
+class GuestBridge;
 class Presentation;
 
 class VirtualMachineException : public std::exception
 {
 public:
-    VirtualMachineException(QString cause) { m_what = cause.toStdString(); }
-    QString cause() const throw() { return QString::fromStdString(m_what); }
+    VirtualMachineException(std::string what) { m_what = what; }
     virtual const char* what() const throw() override { return m_what.c_str(); }
 private:
     std::string m_what;
@@ -34,7 +32,7 @@ private:
 
 struct InstallFile
 {
-    InstallFile(rapidxml::xml_node<char>* installFileNode, Presentation* pres);
+    InstallFile(nlohmann::json installFileObject, Presentation* pres);
     QString vmPath;
 
     std::vector<uint8_t> content;
@@ -46,35 +44,9 @@ struct InstallFile
 
 struct InitScript
 {
-    InitScript(rapidxml::xml_node<char>* initScriptNode, Presentation* pres);
+    InitScript(nlohmann::json initScriptObject, Presentation* pres);
     
     std::vector<uint8_t> content;
-};
-
-struct FileObjective
-{
-    FileObjective(rapidxml::xml_node<char>* fileNode);
- 
-    QString vmPath;
-
-    QStringList matchStrings;
-    bool caseSensitive = false;
-    bool trimWhitespace = true;
-    bool normalizeWhitespace = true;
-
-    QString regexMatch;
-};
-
-struct CommandObjective
-{
-    CommandObjective(rapidxml::xml_node<char>* runCommandNode);
- 
-    /* Each list entry is alternative command (eg. for different editors)*/
-    QStringList command;
-    int expectedExitCode = 0;
-    /* Each list entry is a list of alternative arguments */
-    QList<QStringList> args;
-    QStringList fileArgs;
 };
 
 class VirtualMachine : public QObject
@@ -89,8 +61,8 @@ public:
     void setNet(Network* net);
     ~VirtualMachine();
 private:
-    VirtualMachine(rapidxml::xml_node<char>* vmNode, Presentation* pres);
-    VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres);
+    VirtualMachine(nlohmann::json &vmObject, Presentation* pres);
+    VirtualMachine(QString id, Network* net, bool wan, QString image, Presentation* pres);
 
     void createImageFile();
     QString m_id;
@@ -98,7 +70,7 @@ private:
     Network* m_net = nullptr;
     QString m_macAddress;
 
-    bool m_hasSlirpNetDev = false;
+    bool m_wan = false;
 
     QString m_image;
     DiskImage* m_diskImage;
@@ -109,11 +81,7 @@ private:
     QList<InstallFile> m_installFiles;
     QList<InitScript> m_initScripts;
 
-    QList<FileObjective> m_fileObjectives;
-    QList<CommandObjective> m_commandObjectives;
-
     QTemporaryFile m_imageFile;
-
 
     QStringList getArgs();
     bool m_isRunning = false;
@@ -145,7 +113,7 @@ public slots:
     void stop();
     void restart();
 
-    friend class VirtualMachineManager;
+    friend class Presentation;
     friend class GuestBridge;
 };
 

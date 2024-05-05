@@ -11,11 +11,15 @@
 #include "third-party/RapidXml/rapidxml.hpp"
 #include "third-party/RapidXml/rapidxml_print.hpp"
 
+#include "VirtualMachine.hpp"
+#include "Network.hpp"
+#include "VirtualMachineWidget.hpp"
 // Size of unzip buffor
 #define BUFFOR_SZ 1024
 #define TEXT_NODE_SZ sizeof("<Text>")
 
 using namespace rapidxml;
+using namespace nlohmann;
 
 static void parseXmlDimensions(xml_node<char>* xmlNode, PresentationElement* e) {
     auto getDim = [=](QByteArray dimName) -> qreal {
@@ -290,7 +294,7 @@ void Presentation::parseRootXml() {
             else if(nodeStr == QString("vm").toLower()){
                 vmIdAttribute = tmpNode->first_attribute("id", 0UL, false);
                 QString vmId = vmIdAttribute ? vmIdAttribute->value() : nullptr; 
-                VirtualMachine* vm = m_vmManager->getVirtualMachine(vmId);
+                VirtualMachine* vm = getVirtualMachine(vmId);
 
                 if(vm){
                     PresentationElement* tE = new PresentationElement();
@@ -316,6 +320,124 @@ void Presentation::parseRootXml() {
     rootXml.close();
 }
 
+void Presentation::parseVirtualMachines(json &vmsObj) {
+    for(auto &vmObj : vmsObj){
+        try{
+            VirtualMachine* vm = nullptr;
+            vm = new VirtualMachine(vmObj, this);
+
+            if(vm->m_id.isEmpty()) {
+                qWarning("virt-env.jsonc: Found virtual machine object with empty ID string. Ignoring...");
+
+                delete vm;
+                continue;
+            }
+
+            if(m_virtualMachines.contains(vm->m_id)) {
+                qWarning("virt-env.jsonc: virtual machine %s already exist! Ignoring duplicate...", vm->m_id.toUtf8().data());
+
+                delete vm;
+                continue;
+            }
+
+            m_virtualMachines[vm->m_id] = vm;
+        }
+        catch(VirtualMachineException &e) {
+            qWarning("virt-env.jsonc: parsing virtual machine object failed: %s. Ignoring...", e.what());
+        }
+    }
+}
+
+void Presentation::parseNetworks(json &networksObj) {
+    for(auto &netObj : networksObj){
+        try{
+            Network* net = nullptr;
+            net = new Network(netObj);
+
+            if(net->m_id.isEmpty()) {
+                qWarning("virt-env.jsonc: Found network object with empty ID string. Ignoring...");
+
+                delete net;
+                continue;
+            }
+
+            if(m_networks.contains(net->m_id)) {
+                qWarning("virt-env.jsonc: network %s already exist! Ignoring duplicate...", net->m_id.toUtf8().data());
+
+                delete net;
+                continue;
+            }
+
+            m_networks[net->m_id] = net;
+        }
+        catch(NetworkException &e) {
+            qWarning("virt-env.jsonc: parsing network object failed: %s. Ignoring...", e.what());
+        }
+    }
+}
+
+void Presentation::parseVirtEnvJsonc() {
+    if(!isFileValid("virt-env.jsonc"))
+        return;
+
+    QFile jsonFile(getFilePath("virt-env.jsonc"));
+
+    if(jsonFile.open(QIODevice::ReadOnly) == false){
+        throw PresentationException("Failed to open virt-env.jsonc inside the archive");
+    }
+    
+    QByteArray ba = jsonFile.readAll();
+    json virtEnv;
+    
+    try{
+        virtEnv = json::parse(ba.data(), nullptr, true, true);
+        if(virtEnv.contains("virtualMachines"))
+            parseVirtualMachines(virtEnv["virtualMachines"]);
+        if(virtEnv.contains("networks"))
+            parseNetworks(virtEnv["networks"]);
+    }
+    catch(json::exception &e){
+        QString exceptionStr = "Failed to parse \"virt-env.jsonc\": ";
+        exceptionStr += e.what();
+        throw PresentationException(exceptionStr);       
+    }
+
+    for(auto net : m_networks){
+        if(net->m_vmId != nullptr){
+            net->m_vm = getVirtualMachine(net->m_vmId);
+            if(net->m_vm == nullptr){
+                QString exceptionStr = "virt-env.jsonc: net \"" + net->m_id + "\": ";
+                exceptionStr += "Virtual machine \"" + net->m_vmId + "\" does not exist.";
+                throw PresentationException(exceptionStr);
+            }
+        }
+        else{
+            net->m_vmId = QUuid::createUuid().toString();
+            VirtualMachine* vm = new VirtualMachine(net->m_vmId, net, net->m_wan, "router", this);
+            m_virtualMachines[vm->m_id] = vm;
+        }
+    }
+
+    for(auto vm : m_virtualMachines){
+        Network* net = getNetwork(vm->m_netId);
+        if(net){
+            vm->setNet(net);
+
+            if(net->vm() == vm){
+                vm->m_wan = net->hasWan();
+
+                vm->start();
+            }
+        }
+        else if(vm->m_netId != nullptr){
+            QString exceptionStr = "virt-env.jsonc: vm \"" + vm->m_id + "\": ";
+            exceptionStr += "Network \"" + vm->m_netId + "\" does not exist.";
+            throw PresentationException(exceptionStr);
+        }
+    }
+    
+}
+
 Presentation::Presentation(QString path) {
     path = QFileInfo(path).absoluteFilePath();
     m_tmpDir.setAutoRemove(false);
@@ -326,12 +448,8 @@ Presentation::Presentation(QString path) {
 
     try{
         decompressArchive(path);
-        m_vmManager = new VirtualMachineManager(getFilePath("vms.xml"), this);
-        m_netManager = new NetworkManager(getFilePath("nets.xml"));
-        m_netManager->setVirtualMachineManager(m_vmManager);
-        m_vmManager->setNetworkManager(m_netManager);
+        parseVirtEnvJsonc();
         parseRootXml();
-        
     }
     catch(PresentationException &e){
         m_tmpDir.remove();
@@ -341,11 +459,15 @@ Presentation::Presentation(QString path) {
 
 Presentation::~Presentation() {
     m_tmpDir.remove();
-    for(auto slide : m_slides){
+
+    for(auto slide : m_slides)
         delete slide;
-    }
-    delete m_netManager;
-    delete m_vmManager;
+    
+    for(auto vm : m_virtualMachines)
+        vm->deleteLater();
+    
+    for(auto net : m_networks)
+        net->deleteLater();
 }
 
 bool Presentation::isFileValid(QString path) {

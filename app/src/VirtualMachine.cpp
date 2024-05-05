@@ -9,8 +9,10 @@
 #include <QtCore/qprocessordetection.h>
 
 #include "Application.hpp"
+#include "Network.hpp"
+#include "GuestBridge.hpp"
 
-using namespace rapidxml;
+using namespace nlohmann;
 
 static uint32_t cidCounter = 1000 * 1000;
 
@@ -18,287 +20,86 @@ static uint32_t cidCounter = 1000 * 1000;
 #define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
 #define KERNEL_EARLYPRINTK_CMD "earlyprintk=ttyS0 " KERNEL_DEFAULT_CMD
 
-static bool getBool(QString boolStr, bool defaultValue){
-    QString lowerBoolStr = boolStr.toLower();
-
-    if(lowerBoolStr == "true"){
-        return true;
+InstallFile::InstallFile(nlohmann::json installFileObject, Presentation* pres){
+    if(installFileObject.contains("content")) {
+        std::string content = installFileObject["content"];
+        this->content = std::vector<uint8_t>(content.begin(), content.end());
     }
-    else if(lowerBoolStr == "false"){
-        return false;
-    }
-    return defaultValue;
-}
-
-static bool getXmlBoolAttrib(xml_node<char>* node, const char* name, bool defaultValue){
-    if(node == nullptr){
-        return defaultValue;
-    }
-
-    xml_attribute<char>* attrib = node->first_attribute(name, 0UL, false);
-    if(attrib == nullptr){
-        return defaultValue;
-    }
-
-    return getBool(attrib->value(), defaultValue);
-}
-
-static bool getXmlBoolValue(xml_node<char>* parentNode, const char* name, bool defaultValue){
-    if(parentNode == nullptr){
-        return defaultValue;
-    }
-
-    xml_node<char>* node = parentNode->first_node(name, 0UL, false);
-    if(node == nullptr){
-        return defaultValue;
-    }
-
-    return getBool(node->value(), defaultValue);
-}
-
-InstallFile::InstallFile(xml_node<char>* installFileNode, Presentation* pres) {
-    assert(installFileNode);
-
-    xml_node<char>* pathNode = installFileNode->first_node("path", 0UL, false);
-    vmPath = pathNode->value();
-    
-    xml_node<char>* contentNode = installFileNode->first_node("content", 0UL, false);
-    xml_attribute<char>* contentPathAttrib = nullptr;
-
-    xml_attribute<char>* ownerAttrib = installFileNode->first_attribute("owner", 0UL, false);
-    xml_attribute<char>* groupAttrib = installFileNode->first_attribute("group", 0UL, false);
-    xml_attribute<char>* permAttrib = installFileNode->first_attribute("perm", 0UL, false);
-
-    if(contentNode){
-        std::string contentString = contentNode->value();
-        content = std::vector<uint8_t>(contentString.begin(), contentString.end());
-        contentPathAttrib = contentNode->first_attribute("path", 0UL, false);
-        if(contentPathAttrib){
-            if(pres->isFileValid(contentPathAttrib->value())){
-                QFile file = QFile(pres->getFilePath(contentPathAttrib->value()));
-                if(file.open(QIODevice::ReadOnly)){
-                    QByteArray ba = file.readAll();
-                    content = std::vector<uint8_t>(ba.begin(), ba.end());
-                }
-                else
-                    qWarning("vms.xml: Failed to open %s.", contentPathAttrib->value());
-            }
-            else
-                qWarning("vms.xml: install-file's content path argument exist, but it's not valid.");
-        }
-    }
-
-    if(ownerAttrib) {
-        bool ok = false;
-        owner = QString(ownerAttrib->value()).toUInt(&ok);
-        if(!ok){
-            owner = 0;
-            qWarning("vms.xml: owner attribute value is not valid (%s)", ownerAttrib->value());
-        }
-    }
-
-    if(groupAttrib) {
-        bool ok = false;
-        group = QString(groupAttrib->value()).toUInt(&ok);
-        if(!ok){
-            group = 0;
-            qWarning("vms.xml: group attribute value is not valid (%s)", groupAttrib->value());
-        }
-    }
-    
-    if(permAttrib) {
-        bool ok = false;
-        perm = QString(permAttrib->value()).toUInt(&ok, 8);
-        if(!ok || perm > 0777){
-            perm = 0640;
-            qWarning("vms.xml: perm attribute value is not valid (%s)", permAttrib->value());
-        }
-    }
-}
-
-InitScript::InitScript(rapidxml::xml_node<char>* initScriptNode, Presentation* pres) {
-    assert(initScriptNode);
-
-    xml_attribute<char>* pathAttrib = initScriptNode->first_attribute("path", 0UL, false);
-
-    if(pathAttrib){
-        if(pres->isFileValid(pathAttrib->value())){
-            QFile file = QFile(pres->getFilePath(pathAttrib->value()));
-            if(file.open(QIODevice::ReadOnly)){
-                QByteArray ba = file.readAll();
-                content = std::vector<uint8_t>(ba.begin(), ba.end());
-            }
-            else
-                qWarning("vms.xml: Failed to open %s.", pathAttrib->value());
+    else if(installFileObject.contains("contentPath")) {
+        QString contentPath = QString::fromStdString(installFileObject["contentPath"]); 
+        QFile file = QFile(pres->getFilePath(contentPath));
+        if(file.open(QIODevice::ReadOnly)) {
+            QByteArray ba = file.readAll();
+            content = std::vector<uint8_t>(ba.begin(), ba.end());
         }
         else
-            qWarning("vms.xml: init-script's path argument exist, but it's not valid.");
+            throw VirtualMachineException("Failed to open installFile " + contentPath.toStdString());
     }
-    else {
-        std::string contentStr = initScriptNode->value();
-        content = std::vector<uint8_t>(contentStr.begin(), contentStr.end());
-    }
-}
+    else
+        throw VirtualMachineException("installFile object is defined, but neither contentPath nor content strings exist");
 
-FileObjective::FileObjective(xml_node<char>* fileNode){
-    xml_node<char>* pathNode = fileNode->first_node("path", 0UL, false);
-    if(pathNode != nullptr){
-        vmPath = pathNode->value();
-    }
+    vmPath = QString::fromStdString(installFileObject["path"]); 
 
-    caseSensitive = getXmlBoolAttrib(fileNode, "case-sensitive", false);
-    trimWhitespace = getXmlBoolAttrib(fileNode, "trim-whitespace", true);
-    normalizeWhitespace = getXmlBoolAttrib(fileNode, "normalize-whitespace", true);
+    if(installFileObject.contains("uid"))
+        owner = installFileObject["uid"];
+
+    if(installFileObject.contains("gid"))
+        group = installFileObject["gid"];
     
-    xml_node<char>* regexMatchNode = fileNode->first_node("regex-match", 0UL, false);
-    if(regexMatchNode != nullptr){
-        xml_attribute<char>* regexAttrib = regexMatchNode->first_attribute("regex", 0UL, false);
-        if(regexAttrib != nullptr){
-            regexMatch = regexAttrib->value();
-        }
-    }
-
-    xml_node<char>* matchNode = fileNode->first_node("match", 0UL, false);
-    while(matchNode){
-        xml_attribute<char>* stringAttrib = matchNode->first_attribute("string", 0UL, false);
-        if(stringAttrib != nullptr){
-            matchStrings.append(stringAttrib->value());
-        }
-
-        matchNode = matchNode->next_sibling("match", 0UL, false);
-    }
-}
-
-CommandObjective::CommandObjective(xml_node<char>* runCommandNode){
-    xml_node<char>* commandNode = runCommandNode->first_node("command", 0UL, false);
-    if(commandNode){
-        xml_attribute<char>* altAttrib = commandNode->first_attribute("alt", 0UL, false);
-        if(altAttrib != nullptr){
-            command.append(QString(altAttrib->value()).split(";", Qt::SkipEmptyParts));
-        }
-        if(commandNode->value()){
-            command.append(commandNode->value());
-        }
-        xml_attribute<char>* exitCodeAttrib = commandNode->first_attribute("exit-code", 0UL, false);
-        if(exitCodeAttrib != nullptr){
-            bool ok = false;
-            expectedExitCode = QString(exitCodeAttrib->value()).toInt(&ok);
-            if(ok == false){
-                qWarning() << "Failed to convert" << exitCodeAttrib->value() << "into integer value";
-                expectedExitCode = 0;
-            }
-        }
-    }
-
-    xml_node<char>* argNode = runCommandNode->first_node("arg", 0UL, false);
-    while(argNode){
-        QStringList arg;
-
-        xml_attribute<char>* altAttrib = argNode->first_attribute("alt", 0UL, false);
-        if(altAttrib != nullptr){
-            arg.append(QString(altAttrib->value()).split(";", Qt::SkipEmptyParts));
-        }
-        if(argNode->value()){
-            arg.append(argNode->value());
-        }
-        args.append(arg);
+    if(installFileObject.contains("perm")) {
+        bool ok = false;
+        perm = QString::fromStdString(installFileObject["perm"]).toUInt(&ok, 8);
+        if(!ok) 
+            throw VirtualMachineException("Failed to convert installFile's perm string to octal value");
         
-        xml_attribute<char>* fileAttrib = argNode->first_attribute("file", 0UL, false);
-        if(fileAttrib != nullptr){
-            fileArgs.append(fileAttrib->value());
-        }
-
-        argNode = argNode->next_sibling("arg", 0UL, false);
+        if(perm > 0777)
+            throw VirtualMachineException("Invalid installFile's octal permissions");
     }
 }
 
-VirtualMachine::VirtualMachine(xml_node<char>* vmNode, Presentation* pres) : m_presentation(pres) {
-    xml_attribute<char>* idAttrib = vmNode->first_attribute("id", 0UL, false);
-    if(idAttrib == nullptr){
-        throw VirtualMachineException("<VM> node does not contain id attribute.");
+InitScript::InitScript(json initScriptObject, Presentation* pres){
+    if(initScriptObject.contains("script")){
+        std::string script = initScriptObject["script"];
+        this->content = std::vector<uint8_t>(script.begin(), script.end());
     }
-    m_id = idAttrib->value();
+    else if(initScriptObject.contains("scriptPath")) {
+        QString scriptPath = QString::fromStdString(initScriptObject["scriptPath"]); 
+        QFile file = QFile(pres->getFilePath(scriptPath));
+        if(file.open(QIODevice::ReadOnly)){
+            QByteArray ba = file.readAll();
+            content = std::vector<uint8_t>(ba.begin(), ba.end());
+        }
+        else
+            throw VirtualMachineException("Failed to open script " + scriptPath.toStdString());
+    }
+    else
+        throw VirtualMachineException("initScript object is defined, but neither scriptPath nor script strings exist");
+}
 
-    xml_attribute<char>* netAttrib = vmNode->first_attribute("net", 0UL, false);
-    if(netAttrib == nullptr){
-        m_netId = nullptr;
-        m_net = nullptr;
-    }
-    else{
-        m_netId = netAttrib->value();
-    }
+VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentation(pres) {
+    m_id = QString::fromStdString(vmObject["id"]);
+    m_image = QString::fromStdString(vmObject["image"]);
     
-    xml_node<char>* imageNode = vmNode->first_node("image", 0UL, false);
-    if(imageNode == nullptr){
-        throw VirtualMachineException("Virtual machine \"" + m_id + "\" does not specify image.");
-    }
-    m_image = imageNode->value();
+    if(vmObject.contains("netId"))
+        m_netId = QString::fromStdString(vmObject["netId"]);
+    else
+        m_netId = nullptr;
 
-    xml_node<char>* initNode = vmNode->first_node("init", 0UL, false);
-    if(initNode != nullptr){
-        xml_node<char>* hostnameNode = initNode->first_node("hostname", 0UL, false);
-        if(hostnameNode != nullptr)
-            m_hostname = hostnameNode->value();
-
-        xml_node<char>* motdNode = initNode->first_node("motd", 0UL, false);
-        if(motdNode != nullptr)
-            m_motd = motdNode->value();
-
-        xml_node<char>* installFileNode = initNode->first_node("install-file", 0UL, false);
-        while(installFileNode != nullptr){
-            InstallFile installFile(installFileNode, m_presentation);
-            if(installFile.vmPath.isEmpty())
-                qWarning() << "<install-file> node must have valid <path> subnode. Ignoring objective.";
-            else
-                m_installFiles.append(installFile);
-            installFileNode = installFileNode->next_sibling("install-file", 0UL, false);
-        }
-
-        xml_node<char>* initScriptNode = initNode->first_node("init-script", 0UL, false);
-        while(initScriptNode != nullptr){
-            InitScript initScript(initScriptNode, m_presentation);
-            m_initScripts.append(initScript);
-
-            initScriptNode = initScriptNode->next_sibling("init-script", 0UL, false);
-        }
-    }
-
-    xml_node<char>* objectivesNode = vmNode->first_node("objectives", 0UL, false);
-    if(objectivesNode != nullptr){
-        xml_node<char>* objectiveNode = objectivesNode->first_node(nullptr, 0UL, false);
-        while(objectiveNode){
-            if(QString(objectiveNode->name()).toLower() == "file"){
-                FileObjective fO(objectiveNode);
-                if(fO.vmPath.isEmpty()){
-                    qWarning() << "<file> node must have valid <path> subnode. Ignoring objective.";
-                }
-                else if(fO.regexMatch.isNull() == false && QRegularExpression(fO.regexMatch).isValid() == false){
-                    qWarning() << "<file> node contains <regex-march> subnode with invalid regex. Ignoring objective.";
-                }
-                else{
-                    m_fileObjectives.append(fO);
-                }
-            }
-            else if(QString(objectiveNode->name()).toLower() == "run-command"){
-                CommandObjective cO(objectiveNode);
-                xml_node<char>* commandNode = objectiveNode->first_node("command", 0UL, false);
-                if(cO.command.isEmpty()){
-                    qWarning() << "<run-command> node must have valid <command> subnode. Ignoring objective.";
-                }
-                else{
-                    m_commandObjectives.append(cO);
-                }
-            }
-            else{
-                qWarning() << "Unknown objective node <" + QString(objectiveNode->name()) + ">. Ignoring.";
-            }
-
-            objectiveNode = objectiveNode->next_sibling(nullptr, 0UL, false);
-        }
-    }
-
-    if(m_hostname.isEmpty())
+    if(vmObject.contains("hostname"))
+        m_hostname = QString::fromStdString(vmObject["hostname"]);
+    else
         m_hostname = m_id;
+    
+    if(vmObject.contains("motd"))
+        m_motd = QString::fromStdString(vmObject["motd"]);
+    else
+        m_motd = nullptr;
+    
+    for(auto installFileObj : vmObject["installFiles"])
+        m_installFiles += InstallFile(installFileObj, pres);
+    
+    for(auto initScriptObj : vmObject["initScripts"])
+        m_initScripts += InitScript(initScriptObj, pres);
     
     m_cid = cidCounter++;
     createImageFile();
@@ -309,7 +110,7 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QS
     m_id = id;
     m_net = net;
     m_netId = net->id();
-    m_hasSlirpNetDev = hasSlirpNetDev;
+    m_wan = hasSlirpNetDev;
     m_image = image;
     m_macAddress = m_net->generateNewMacAddress();
     m_hostname = m_id;
@@ -320,18 +121,22 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QS
 void VirtualMachine::createImageFile(){
     m_diskImage = Config::getDiskImage(m_image);
     if(m_diskImage == nullptr){
-        throw VirtualMachineException("Could not create vm \"" + m_id + "\": image \"" + m_image + "\" does not exist");
+        QString exceptionStr = "Could not create vm \"" + m_id + "\": image \"" + m_image + "\" does not exist";
+        throw VirtualMachineException(exceptionStr.toStdString());
     }
 
     if(m_imageFile.open() == false){
-        throw VirtualMachineException("Could not create temporary file: " + m_imageFile.errorString());
+        QString exceptionStr = "Could not create temporary file: " + m_imageFile.errorString();
+        throw VirtualMachineException(exceptionStr.toStdString());
     }
+
     QFile orginalDiskFile(m_diskImage->path);
     if(orginalDiskFile.open(QIODevice::ReadOnly) == false){
         QString exceptionStr = "Could not open disk image \"" + m_diskImage->path + "\": ";
         exceptionStr += orginalDiskFile.errorString();
-        throw VirtualMachineException(exceptionStr);
+        throw VirtualMachineException(exceptionStr.toStdString());
     }
+    
     m_imageFile.write(orginalDiskFile.readAll());
     orginalDiskFile.close();
     m_imageFile.close();
@@ -359,7 +164,7 @@ QStringList VirtualMachine::getArgs(){
         ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=" VNET_MCAST_ADDR ":" + QString::number(m_net->mcastPort())
             << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
     }
-    if(m_hasSlirpNetDev){
+    if(m_wan){
         ret << "-netdev" << "user,id=eth1,net=100.127.254.0/24,dhcpstart=100.127.254.8"
             << "-device" << "virtio-net-device,netdev=eth1,mac=00:00:00:00:00:01";
     }

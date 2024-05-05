@@ -3,6 +3,7 @@
 #include <QtCore/QDebug>
 
 #include "Application.hpp"
+#include "Network.hpp"
 
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     : QWidget(parent)
