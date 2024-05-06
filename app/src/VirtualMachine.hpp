@@ -49,6 +49,51 @@ struct InitScript
     std::vector<uint8_t> content;
 };
 
+struct Subtask
+{
+    std::string id = std::string();
+
+    enum Type {
+        Unknown = -1,
+        Command,
+        File
+    };
+
+    virtual const Type type() const { return Unknown; };
+
+    bool done = false;
+};
+
+struct CommandSubtask : public Subtask
+{
+    CommandSubtask(nlohmann::json &taskObject);
+
+    std::string command = std::string();
+    std::vector<std::string> args = std::vector<std::string>();
+
+    int exitCode = 0;
+};
+
+struct FileSubtask : public Subtask
+{
+    FileSubtask(nlohmann::json &taskObject);
+
+    std::string path = std::string();
+    std::string content = std::string();
+};
+
+struct Task
+{
+    Task(nlohmann::json &taskObject);
+    ~Task();
+
+    QString description;
+
+    QMap<std::string, Subtask*> subtasks;
+
+    QList<QList<Subtask*>> taskPaths;
+};
+
 class VirtualMachine : public QObject
 {
     Q_OBJECT
@@ -80,6 +125,8 @@ private:
     
     QList<InstallFile> m_installFiles;
     QList<InitScript> m_initScripts;
+
+    QList<Task*> m_tasks;
 
     QTemporaryFile m_imageFile;
 

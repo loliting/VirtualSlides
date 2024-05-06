@@ -76,6 +76,91 @@ InitScript::InitScript(json initScriptObject, Presentation* pres){
         throw VirtualMachineException("initScript object is defined, but neither scriptPath nor script strings exist");
 }
 
+FileSubtask::FileSubtask(nlohmann::json &taskObject) {
+    content = taskObject["content"];
+    path = taskObject["path"];
+    
+    if(taskObject.contains("id"))
+        id = taskObject["id"];
+    else
+        id = QUuid::createUuid().toString().toStdString();
+}
+
+CommandSubtask::CommandSubtask(nlohmann::json &taskObject) {
+    command = taskObject["command"];
+    
+    for(auto &arg : taskObject["arguments"])
+        args.push_back(arg);
+    
+    if(taskObject.contains("exitCode"))
+        exitCode = taskObject["exitCode"];
+    else
+        exitCode = 0;
+
+    if(taskObject.contains("id"))
+        id = taskObject["id"];
+    else
+        id = QUuid::createUuid().toString().toStdString();
+}
+
+Task::Task(json &taskObject) {
+    if(taskObject.contains("description"))
+        description = QString::fromStdString(taskObject["description"]);
+
+    for(auto &fileTaskObj : taskObject["files"]) {
+        FileSubtask *subtask = new FileSubtask(fileTaskObj);
+        if(subtask->id.empty()){
+            qWarning("virt-env.jsonc: Found file subtask object with empty ID string. Ignoring...");
+
+            delete subtask;
+            continue;
+        }
+        if(subtasks.contains(subtask->id)){
+            qWarning("virt-env.jsonc: File subtask %s already exist! Ignoring duplicate...", subtask->id.c_str());
+            
+            delete subtask;
+            continue;
+        }
+        subtasks[subtask->id] = subtask;
+    }
+
+    for(auto &commandTaskObj : taskObject["commands"]) {
+        CommandSubtask *subtask = new CommandSubtask(commandTaskObj);
+        if(subtask->id.empty()){
+            qWarning("virt-env.jsonc: Found command subtask object with empty ID string. Ignoring...");
+            
+            delete subtask;
+            continue;
+        }
+        if(subtasks.contains(subtask->id)){
+            qWarning("virt-env.jsonc: Command subtask %s already exist! Ignoring duplicate...", subtask->id.c_str());
+            
+            delete subtask;
+            continue;
+        }
+        subtasks[subtask->id] = subtask;
+    }
+
+    for(auto &taskPath : taskObject["taskPaths"]) {
+        QList<Subtask*> path;
+        for(auto &task : taskPath)
+            path += subtasks[task];
+        if(!path.isEmpty())
+            taskPaths += path;
+    }
+
+    if(taskPaths.isEmpty())
+        taskPaths += QList(subtasks.begin(), subtasks.end());
+}
+
+Task::~Task() {
+    for(auto subtask : subtasks)
+        delete subtask;
+    
+    subtasks.clear();
+    taskPaths.clear();
+}
+
 VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentation(pres) {
     m_id = QString::fromStdString(vmObject["id"]);
     m_image = QString::fromStdString(vmObject["image"]);
@@ -100,6 +185,9 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
     
     for(auto initScriptObj : vmObject["initScripts"])
         m_initScripts += InitScript(initScriptObj, pres);
+    
+    for(auto taskObj : vmObject["tasks"])
+        m_tasks += new Task(taskObj);
     
     m_cid = cidCounter++;
     createImageFile();
@@ -318,4 +406,9 @@ VirtualMachine::~VirtualMachine() {
         m_guestBridge->deleteLater();
     }
     m_guestBridge = nullptr;
+
+    for(auto task : m_tasks)
+        delete task;
+
+    m_tasks.clear();
 }
