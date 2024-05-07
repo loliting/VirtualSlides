@@ -51,15 +51,10 @@ struct InitScript
 
 struct Subtask
 {
+    virtual nlohmann::json toJson();
+
+
     std::string id = std::string();
-
-    enum Type {
-        Unknown = -1,
-        Command,
-        File
-    };
-
-    virtual const Type type() const { return Unknown; };
 
     bool done = false;
 };
@@ -67,6 +62,9 @@ struct Subtask
 struct CommandSubtask : public Subtask
 {
     CommandSubtask(nlohmann::json &taskObject);
+
+    nlohmann::json toJson() override;
+
 
     std::string command = std::string();
     std::vector<std::string> args = std::vector<std::string>();
@@ -78,6 +76,9 @@ struct FileSubtask : public Subtask
 {
     FileSubtask(nlohmann::json &taskObject);
 
+    nlohmann::json toJson() override;
+
+
     std::string path = std::string();
     std::string content = std::string();
 };
@@ -86,6 +87,10 @@ struct Task
 {
     Task(nlohmann::json &taskObject);
     ~Task();
+    
+    nlohmann::json toJson();
+
+    std::string id;
 
     QString description;
 

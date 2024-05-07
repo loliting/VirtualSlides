@@ -76,6 +76,15 @@ InitScript::InitScript(json initScriptObject, Presentation* pres){
         throw VirtualMachineException("initScript object is defined, but neither scriptPath nor script strings exist");
 }
 
+json Subtask::toJson() {
+    json json;
+
+    json["id"] = id;
+    json["done"] = done;
+
+    return json;
+}
+
 FileSubtask::FileSubtask(nlohmann::json &taskObject) {
     content = taskObject["content"];
     path = taskObject["path"];
@@ -84,6 +93,16 @@ FileSubtask::FileSubtask(nlohmann::json &taskObject) {
         id = taskObject["id"];
     else
         id = QUuid::createUuid().toString().toStdString();
+}
+
+json FileSubtask::toJson() {
+    json json = Subtask::toJson();
+
+    json["content"] = content;
+    json["path"] = path;
+    json["type"] = "file";
+
+    return json;
 }
 
 CommandSubtask::CommandSubtask(nlohmann::json &taskObject) {
@@ -101,6 +120,17 @@ CommandSubtask::CommandSubtask(nlohmann::json &taskObject) {
         id = taskObject["id"];
     else
         id = QUuid::createUuid().toString().toStdString();
+}
+
+json CommandSubtask::toJson() {
+    json json = Subtask::toJson();
+
+    json["command"] = command;
+    json["args"] = args;
+    json["exitCode"] = exitCode;
+    json["type"] = "command";
+
+    return json;
 }
 
 Task::Task(json &taskObject) {
@@ -151,6 +181,34 @@ Task::Task(json &taskObject) {
 
     if(taskPaths.isEmpty())
         taskPaths += QList(subtasks.begin(), subtasks.end());
+    
+    id = QUuid::createUuid().toString().toStdString();
+}
+
+json Task::toJson() {
+    json taskJson;
+
+    taskJson["id"] = id;
+
+    std::vector<json> subtasksJson;
+    for(auto &subtask : subtasks)
+        subtasksJson.push_back(subtask->toJson());
+
+    taskJson["subtasks"] = subtasksJson;
+
+
+    std::vector<std::vector<std::string>> pathsJson;
+    for(auto &path : taskPaths){
+        std::vector<std::string> pathJson;
+        for(auto &subtask : path)
+            pathJson.push_back(subtask->id);
+        
+        pathsJson.push_back(pathJson);
+    }
+
+    taskJson["paths"] = pathsJson;
+
+    return taskJson;
 }
 
 Task::~Task() {
@@ -161,7 +219,7 @@ Task::~Task() {
     taskPaths.clear();
 }
 
-VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentation(pres) {
+VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentation(pres), m_cid(cidCounter++) {
     m_id = QString::fromStdString(vmObject["id"]);
     m_image = QString::fromStdString(vmObject["image"]);
     
@@ -189,12 +247,10 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
     for(auto taskObj : vmObject["tasks"])
         m_tasks += new Task(taskObj);
     
-    m_cid = cidCounter++;
     createImageFile();
 }
 
-VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres) : m_presentation(pres) {
-    m_cid = cidCounter++;
+VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres) : m_presentation(pres), m_cid(cidCounter++) {
     m_id = id;
     m_net = net;
     m_netId = net->id();

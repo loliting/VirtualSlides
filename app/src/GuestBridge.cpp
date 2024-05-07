@@ -96,7 +96,7 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
     }
     else if(requestType == "getInstallFiles") {
         std::vector<json> installFiles;
-        for(auto installFile : m_vm->m_installFiles)
+        for(auto &installFile : m_vm->m_installFiles)
             installFiles.push_back(installFileToJson(&installFile));
         
         response["installFiles"] = installFiles;
@@ -104,7 +104,7 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
     }
     else if(requestType == "getInitScripts") {
         std::vector<json> initScripts;
-        for(auto initScript : m_vm->m_initScripts){
+        for(auto &initScript : m_vm->m_initScripts){
             json json;
             json["content"] = initScript.content;
             initScripts.push_back(json);
@@ -112,7 +112,15 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
 
         response["initScripts"] = initScripts;
         response.update(statusResponse(ResponseStatus::Ok));
-    } 
+    }
+    else if(requestType == "getTasks") {
+        std::vector<json> tasks;
+        for(auto &task : m_vm->m_tasks)
+            tasks.push_back(task->toJson());
+
+        response["tasks"] = tasks;
+        response.update(statusResponse(ResponseStatus::Ok));
+    }
     else {
         std::string err = "Unknown request type: \"" + requestType + "\"";
         response.update(statusResponse(ResponseStatus::Err, err));
