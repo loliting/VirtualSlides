@@ -29,6 +29,8 @@ set(VS_SOURCES
     src/GuestBridge.cpp
     src/VirtualMachineWidget.cpp
     src/VirtualMachineWidget.hpp
+    src/VmTaskList.cpp
+    src/VmTaskList.hpp
     src/VSock.cpp
     src/VSock.hpp
     src/VSockServer.cpp
