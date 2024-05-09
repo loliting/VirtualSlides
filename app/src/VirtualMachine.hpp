@@ -62,7 +62,7 @@ struct Subtask
 struct CommandSubtask : public Subtask
 {
     CommandSubtask(nlohmann::json &taskObject);
-
+    
     nlohmann::json toJson() override;
 
 
@@ -167,6 +167,7 @@ public slots:
 
     friend class Presentation;
     friend class GuestBridge;
+    friend class VirtualMachineWidget;
 };
 
 #endif // VIRTUALMACHINE_HPP

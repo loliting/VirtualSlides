@@ -4,6 +4,7 @@
 
 #include "Application.hpp"
 #include "Network.hpp"
+#include "VmTaskList.hpp"
 
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     : QWidget(parent)
@@ -15,19 +16,20 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
 
     m_terminal->setColorScheme("WhiteOnBlack");
     m_terminal->setAutoClose(false);
+    m_terminal->setConfirmMultilinePaste(false);
     
-    connect(m_startButton, SIGNAL(clicked(bool)),
-        this, SLOT(startVm(void)));
-    connect(m_stopButton, SIGNAL(clicked(bool)),
-        this, SLOT(stopVm(void)));
-    connect(m_restartButton, SIGNAL(clicked(bool)),
-        this, SLOT(restartVm(void)));
-    connect(m_vm, SIGNAL(networkChanged(void)),
-        this, SLOT(handleNetworkChanged(void)));
-    connect(m_vm, SIGNAL(vmStarted(void)),
-        this, SLOT(handleVmStarted(void)));
-    connect(m_vm, SIGNAL(vmStopped(void)),
-        this, SLOT(handleVmStopped(void)));
+    connect(m_startButton, &QPushButton::clicked,
+        this, &VirtualMachineWidget::startVm);
+    connect(m_stopButton, &QPushButton::clicked,
+        this, &VirtualMachineWidget::stopVm);
+    connect(m_restartButton, &QPushButton::clicked,
+        this, &VirtualMachineWidget::restartVm);
+    connect(m_vm, &VirtualMachine::networkChanged,
+        this, &VirtualMachineWidget::handleNetworkChanged);
+    connect(m_vm, &VirtualMachine::vmStarted,
+        this, &VirtualMachineWidget::handleVmStarted);
+    connect(m_vm, &VirtualMachine::vmStopped,
+        this, &VirtualMachineWidget::handleVmStopped);
     
     setLayout(m_layout);
     m_layout->addWidget(m_title, 0, 0);
@@ -35,20 +37,48 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     m_layout->addWidget(m_startButton, 0, 2);
     m_layout->addWidget(m_restartButton, 0, 3);
     m_layout->addWidget(m_stopButton, 0, 4);
-    m_layout->addWidget(m_terminal, 1, 0, 1, 5);
+    m_layout->addWidget(m_terminal, 1, 0, 1, 6);
 
     m_stopButton->setEnabled(false);
     m_restartButton->setEnabled(false);
+
+    if(m_vm->m_tasks.count() > 0) {
+        m_tasksButton = new QPushButton(QIcon(":/icons/task-list.png"), "", this);
+
+        connect(m_tasksButton, &QPushButton::clicked,
+            this, &VirtualMachineWidget::displayTaskList);
+
+        m_layout->addWidget(m_tasksButton, 0, 5);
+        m_tasksButton->setMaximumWidth(m_tasksButton->height());
+        m_vmTaskList = new VmTaskList(m_vm->m_tasks);
+        m_vmTaskList->setMaximumSize(256, 368);
+        m_vmTaskList->setMinimumSize(256, 0);
+    }
 }
 
 VirtualMachineWidget::~VirtualMachineWidget() {
-    m_terminal->close();
-    m_layout->deleteLater();
-    m_startButton->deleteLater();
-    m_stopButton->deleteLater();
-    m_restartButton->deleteLater();
-    m_title->deleteLater();
-    m_terminal->deleteLater();
+    if(m_layout)
+        m_layout->deleteLater();
+    if(m_startButton)
+        m_startButton->deleteLater();
+    if(m_stopButton)
+        m_stopButton->deleteLater();
+    if(m_restartButton)
+        m_restartButton->deleteLater();
+    if(m_title)
+        m_title->deleteLater();
+    if(m_terminalCopyAction)
+        m_terminalCopyAction->deleteLater();
+    if(m_terminalPasteAction)
+        m_terminalPasteAction->deleteLater();
+    if(m_terminalZoomInAction)
+        m_terminalZoomInAction->deleteLater();
+    if(m_terminalZoomOutAction)
+        m_terminalZoomOutAction->deleteLater();
+    if(m_terminal) {
+        m_terminal->close();
+        m_terminal->deleteLater();
+    }
 }
 
 void VirtualMachineWidget::startVm() {
@@ -91,12 +121,6 @@ void VirtualMachineWidget::handleVmStopped() {
     m_stopButton->setEnabled(false);
     m_restartButton->setEnabled(false);
     m_startButton->setEnabled(true);
-
-    m_terminalCopyAction->deleteLater();
-    m_terminalPasteAction->deleteLater();
-
-    m_terminalZoomInAction->deleteLater();
-    m_terminalZoomOutAction->deleteLater();
 }
 
 void VirtualMachineWidget::handleVmStarted() {
@@ -111,10 +135,31 @@ void VirtualMachineWidget::handleVmStarted() {
     m_terminal = new QTermWidget(0, this);
     m_terminal->setColorScheme("WhiteOnBlack");
     m_terminal->setAutoClose(false);
-    m_layout->addWidget(m_terminal, 1, 0, 1, 5);
+    m_layout->addWidget(m_terminal, 1, 0, 1, 6);
     m_terminal->setShellProgram(Application::applicationDirPath() +  "/vs-sock-stdio-connector");
     m_terminal->setArgs(QStringList(m_vm->serverName()));
     
+    if(m_terminalCopyAction) {
+        m_terminalCopyAction->deleteLater();
+        m_terminalCopyAction = nullptr;
+    }
+
+    if(m_terminalPasteAction) {
+        m_terminalPasteAction->deleteLater();
+        m_terminalPasteAction = nullptr;
+    }
+
+
+    if(m_terminalZoomInAction) {
+        m_terminalZoomInAction->deleteLater();
+        m_terminalZoomInAction = nullptr;
+    }
+
+    if(m_terminalZoomOutAction) {
+        m_terminalZoomOutAction->deleteLater();
+        m_terminalZoomOutAction = nullptr;
+    }
+
     m_terminalCopyAction = new QAction("Copy");
     m_terminalPasteAction = new QAction("Paste");
 
@@ -153,4 +198,14 @@ void VirtualMachineWidget::handleVmStarted() {
     m_terminal->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     m_terminal->startShellProgram();
+}
+
+void VirtualMachineWidget::displayTaskList() {
+    m_vmTaskList->move(mapToGlobal(QPoint(m_tasksButton->pos().x(),
+        m_tasksButton->pos().y() + m_tasksButton->height()))
+    );
+
+    m_vmTaskList->updateTasksProgress();
+    
+    m_vmTaskList->show();
 }
