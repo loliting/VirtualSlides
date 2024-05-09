@@ -126,7 +126,6 @@ private:
     DiskImage* m_diskImage;
 
     QString m_hostname;
-    QString m_motd;
     
     QList<InstallFile> m_installFiles;
     QList<InitScript> m_initScripts;

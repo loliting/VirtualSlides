@@ -27,16 +27,14 @@ pub enum RequestType {
     Reboot,
     DownloadTest,
     GetHostname,
-    GetMotd,
     GetInstallFiles,
     GetInitScripts,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 enum Status {
-    #[serde(rename = "ok")] 
     Ok,
-    #[serde(rename = "err")] 
     Err
 }
 
@@ -47,7 +45,6 @@ pub struct Response {
     pub(in self) error: Option<String>,
 
     pub hostname: Option<String>,
-    pub motd: Option<String>,
     pub install_files: Option<Vec<InstallFile>>,
     pub init_scripts: Option<Vec<InitScript>>,
 }

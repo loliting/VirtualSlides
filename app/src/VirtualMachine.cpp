@@ -233,11 +233,6 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
     else
         m_hostname = m_id;
     
-    if(vmObject.contains("motd"))
-        m_motd = QString::fromStdString(vmObject["motd"]);
-    else
-        m_motd = nullptr;
-    
     for(auto installFileObj : vmObject["installFiles"])
         m_installFiles += InstallFile(installFileObj, pres);
     

@@ -95,10 +95,6 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         response["hostname"] = m_vm->m_hostname.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "getMotd") {
-        response["motd"] = m_vm->m_motd.toStdString();
-        response.update(statusResponse(ResponseStatus::Ok));
-    }
     else if(requestType == "getInstallFiles") {
         std::vector<json> installFiles;
         for(auto &installFile : m_vm->m_installFiles)

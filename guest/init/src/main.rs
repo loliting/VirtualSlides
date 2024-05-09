@@ -48,7 +48,6 @@ fn main() -> Result<()> {
     } else {
         println!("Machine is not initializated!");
         
-        set_motd()?;
         query_hostname()?;
 
         set_machine_initializated(true)?;

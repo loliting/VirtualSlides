@@ -95,27 +95,6 @@ pub fn query_hostname() -> Result<()> {
     Ok(())
 }
 
-pub fn set_motd() -> Result<()> {
-    let mut hb = HostBridge::new()?;
-
-    let motd = match hb.message_host(RequestType::GetMotd)?.motd {
-        Some(motd) => motd,
-        None => String::new()
-    };
-    
-    if !motd.is_empty() {
-        let mut motd_file = File::options()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open("/etc/motd")?;
-    
-        motd_file.write_all(motd.as_bytes())?;
-        motd_file.write(b"\n")?;
-    }
-    Ok(())
-}
-
 pub fn mount_sys_dirs() -> Result<()> {
     std::fs::create_dir_all("/proc")?;
     mount::<str, str, str, str>(None, "/proc", Some("proc"), MsFlags::empty(), None)?;
