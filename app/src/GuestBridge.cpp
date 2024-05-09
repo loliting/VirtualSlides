@@ -15,13 +15,13 @@ GuestBridge::~GuestBridge() {
     stop();
 }
 
-void GuestBridge::start() {
+bool GuestBridge::start() {
     if(m_started)
-        return;
+        return true;
 
     if(!m_server->listen(VSockServer::Host, m_vm->m_cid)){
         qWarning() << "VSockServer failed:" << m_server->errorString();
-        return;
+        return false;
     }
 
     connect(m_server, &VSockServer::newConnection, this, [=] {
@@ -37,6 +37,11 @@ void GuestBridge::start() {
     });
 
     m_started = true;
+    return true;
+}
+
+bool GuestBridge::isListening() {
+    return m_started;
 }
 
 void GuestBridge::stop() {

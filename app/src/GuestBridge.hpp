@@ -16,7 +16,9 @@ public:
     GuestBridge(VirtualMachine* vm);
     ~GuestBridge();
     
-    void start();
+    bool isListening();
+
+    bool start();
     void stop();
 private:
     enum ResponseStatus {

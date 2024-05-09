@@ -247,17 +247,19 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
     for(auto taskObj : vmObject["tasks"])
         m_tasks += new Task(taskObj);
     
+    m_guestBridge = new GuestBridge(this);
+    m_guestBridge->start();
+    
     createImageFile();
 }
 
-VirtualMachine::VirtualMachine(QString id, Network* net, bool hasSlirpNetDev, QString image, Presentation* pres) : m_presentation(pres), m_cid(cidCounter++) {
-    m_id = id;
-    m_net = net;
-    m_netId = net->id();
-    m_wan = hasSlirpNetDev;
-    m_image = image;
-    m_macAddress = m_net->generateNewMacAddress();
-    m_hostname = m_id;
+VirtualMachine::VirtualMachine(QString id, Network* net, bool hasWan, QString image, Presentation* pres)
+    : m_presentation(pres), m_cid(cidCounter++), m_id(id), m_net(net),
+    m_netId(net->id()), m_wan(hasWan), m_image(image),
+    m_macAddress(m_net->generateNewMacAddress()), m_hostname(m_id),
+    m_guestBridge(new GuestBridge(this))
+{
+    m_guestBridge->start();
     
     createImageFile();
 }
@@ -343,13 +345,13 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
 void VirtualMachine::start() {
     if(m_isRunning)
         return;
+    if(m_guestBridge && !m_guestBridge->isListening())
+        m_guestBridge->start();
 
     m_consoleServer = new QLocalServer();
     m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_consoleServer->listen(m_serverName);
     
-    m_guestBridge = new GuestBridge(this);
-
     if(m_consoleServer->isListening() == false) {
         QMessageBox(QMessageBox::Critical,
             "Virtual Slides: VM error",
@@ -369,19 +371,12 @@ void VirtualMachine::start() {
     m_vmProcess->setArguments(getArgs());
     m_vmProcess->start();
 
-    connect(m_vmProcess, &QProcess::started, m_guestBridge, &GuestBridge::start);
     connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(handleVmProcessFinished(int)));
 
     m_isRunning = true;
 }
 
 void VirtualMachine::handleVmProcessFinished(int exitCode) {
-    if(m_guestBridge){
-        m_guestBridge->stop();
-        m_guestBridge->deleteLater();
-    }
-    m_guestBridge = nullptr;
-
     if(m_consoleSocket){
         m_consoleSocket->disconnect();
         m_consoleSocket->deleteLater();
@@ -425,12 +420,6 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
 void VirtualMachine::stop() {
     if(!m_isRunning || !m_vmProcess)
         return;
-
-    if(m_guestBridge){
-        m_guestBridge->stop();
-        m_guestBridge->deleteLater();
-    }
-    m_guestBridge = nullptr;
 
     if(m_vmProcess->state() == QProcess::Running){
         m_vmProcess->terminate();
