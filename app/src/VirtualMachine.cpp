@@ -260,7 +260,7 @@ VirtualMachine::VirtualMachine(QString id, Network* net, bool hasWan, QString im
     m_guestBridge(new GuestBridge(this))
 {
     m_guestBridge->start();
-    
+
     createImageFile();
 }
 
@@ -345,9 +345,10 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
 void VirtualMachine::start() {
     if(m_isRunning)
         return;
+
     if(m_guestBridge && !m_guestBridge->isListening())
         m_guestBridge->start();
-
+    
     m_consoleServer = new QLocalServer();
     m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_consoleServer->listen(m_serverName);
@@ -413,6 +414,15 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
     emit vmStopped();
     if(m_shouldRestart) {
         m_shouldRestart = false;
+        start();
+    }
+
+    /*
+     * If the guest bridge is not listing and qemu process finished, 
+     * it probably means that our init system crashed.
+     */
+    if(m_guestBridge && !m_guestBridge->isListening()){
+        m_guestBridge->start();
         start();
     }
 }
