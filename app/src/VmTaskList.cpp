@@ -51,12 +51,27 @@ VmTaskItem::VmTaskItem(const Task *task, QWidget *parent)
 }
 
 void VmTaskItem::updateTaskProgress() {
-    m_progressBar->setRange(0, m_task->subtasks.count());
-    
+    float maxProgress = 0;
+
+    int subtasksCount = 0;
     int doneSubtasks = 0;
-    for(auto &subtask : m_task->subtasks)
-        doneSubtasks += subtask->done;
+    for(auto &path : m_task->taskPaths) {
+        float progress = 0;
+        int doneCounter = 0;
+        for(auto subtask : path)
+            doneCounter += subtask->done;
+
+        progress = (float)doneCounter / (float)path.count();
+        if(progress > maxProgress){
+            maxProgress = progress;
+            subtasksCount = path.count();
+            doneSubtasks = doneCounter;
+        }
+    }
     
+    if(subtasksCount == 0)
+        subtasksCount = 1;
+    m_progressBar->setRange(0, subtasksCount);
     m_progressBar->setValue(doneSubtasks);
 }
 
