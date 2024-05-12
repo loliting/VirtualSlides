@@ -13,6 +13,7 @@ public:
     explicit PresentationWindow(Presentation* presentation);
     ~PresentationWindow();
 
+    void showFullScreen();
 private:
     Presentation* m_presentation = nullptr;
 
