@@ -58,5 +58,8 @@ void PresentationWindow::previousSlide() {
 
 void PresentationWindow::showFullScreen() {
     QMainWindow::showFullScreen();
+    resize(screen()->size());
+    updateGeometry();
+
     m_presentation->m_slides[m_currentSlideIndex]->setFixedSize(size());
 }

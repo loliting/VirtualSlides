@@ -17,6 +17,7 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     m_terminal->setColorScheme("WhiteOnBlack");
     m_terminal->setAutoClose(false);
     m_terminal->setConfirmMultilinePaste(false);
+    m_terminal->setTerminalSizeHint(false);
     
     connect(m_startButton, &QPushButton::clicked,
         this, &VirtualMachineWidget::startVm);
