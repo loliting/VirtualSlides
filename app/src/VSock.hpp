@@ -37,10 +37,6 @@ public:
 signals:
     void connected();
 
-    /* 
-     * TODO: VSock does not become disconnected automatically when the other
-     * side disconnects
-     */
     void disconnected(); 
     void errorOccurred(int error);
 private:
@@ -50,6 +46,7 @@ private:
     bool setFd(int fd);
     qint64 handleReadAvaliable();
     bool handleWriteAvaliable();
+    void handleSocketException();
 private:
     bool m_connected = false;
     int m_sockfd;
@@ -62,7 +59,8 @@ private:
 
     QSocketNotifier* m_readNotifier = nullptr;
     QSocketNotifier* m_writeNotifier = nullptr;
-    
+    QSocketNotifier* m_exceptionNotifier = nullptr;
+
 
     friend class VSockServer;
 };

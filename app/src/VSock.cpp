@@ -65,17 +65,25 @@ VSock::~VSock() {
 void VSock::close() {
     if(!m_connected)
         return;
-    
+        
     m_connected = false;
     ::close(m_sockfd);
+    m_sockfd = 0;
 
     if(m_readNotifier){
+        m_readNotifier->setEnabled(false);
         m_readNotifier->deleteLater();
         m_readNotifier = nullptr;
     }
     if(m_writeNotifier){
+        m_writeNotifier->setEnabled(false);
         m_writeNotifier->deleteLater();
         m_writeNotifier = nullptr;
+    }
+    if(m_exceptionNotifier){
+        m_exceptionNotifier->setEnabled(false);
+        m_exceptionNotifier->deleteLater();
+        m_exceptionNotifier = nullptr;
     }
     if(m_addr){
         delete m_addr;
@@ -101,6 +109,10 @@ bool VSock::setFd(int fd) {
     m_writeNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Write, this);
     connect(m_writeNotifier, &QSocketNotifier::activated,
         this, &VSock::handleWriteAvaliable);
+
+    m_exceptionNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Exception, this);
+    connect(m_exceptionNotifier, &QSocketNotifier::activated,
+        this, &VSock::handleSocketException);
 
     m_connected = QIODevice::open(QIODevice::ReadWrite);
     return m_connected;
@@ -142,9 +154,8 @@ qint64 VSock::handleReadAvaliable() {
     }
 
     if(errno != EAGAIN && errno != 0) {
-        if(errno == EPIPE){
+        if(errno == EPIPE || errno == ECONNRESET){
             close();
-            emit disconnected();
             return -1;
         }
         m_err = errno;
@@ -172,9 +183,8 @@ bool VSock::handleWriteAvaliable() {
         m_writeBuffor.remove(0, writtenBytes);
     
     if(errno != EAGAIN && errno != 0) {
-        if(errno == EPIPE){
+        if(errno == EPIPE || errno == ECONNRESET){
             close();
-            emit disconnected();
             return false;
         }
         m_err = errno;
@@ -231,7 +241,7 @@ bool VSock::waitForBytesWritten(int msecs){
 bool VSock::setBlocking(int fd, bool block){
     int flags = fcntl(fd, F_GETFL, 0);
     flags &= ~O_NONBLOCK;
-    flags |= (!block * O_NONBLOCK);
+    flags |=  !block * O_NONBLOCK;
 
     return fcntl(fd, F_SETFL, flags) != -1;
 }
@@ -243,4 +253,27 @@ bool VSock::setBlocking(bool block){
         emit errorOccurred(m_err);
     }
     return true;
+}
+
+void VSock::handleSocketException() {
+    if(!m_connected)
+        return;
+    
+    int err = 0;
+    socklen_t optlen;
+    
+    if(getsockopt(m_sockfd, SOL_SOCKET, SO_ERROR, &err, &optlen) == -1) {
+        qWarning("An error occurred during getting socket error. %s", strerror(errno));
+        return;
+    }
+
+    if(errno == EPIPE || errno == ECONNRESET){
+        close();
+        return;
+    }
+
+    m_err = err;
+    setErrorString(strerror(m_err));
+    emit errorOccurred(m_err);
+
 }
