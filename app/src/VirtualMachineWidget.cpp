@@ -173,6 +173,11 @@ void VirtualMachineWidget::handleVmStarted() {
     m_terminalZoomInAction->setShortcut(QKeySequence("Ctrl++"));
     m_terminalZoomOutAction->setShortcut(QKeySequence("Ctrl+-"));
 
+    m_terminalZoomInAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    m_terminalZoomOutAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    m_terminalCopyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    m_terminalPasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+
     m_terminal->addAction(m_terminalCopyAction);
     m_terminal->addAction(m_terminalPasteAction);
 
