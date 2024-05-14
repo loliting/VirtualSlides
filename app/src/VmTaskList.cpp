@@ -79,3 +79,16 @@ void VmTaskList::updateTasksProgress() {
     for(auto &taskItem : m_items)
         taskItem->updateTaskProgress();
 }
+
+// Ensure that widget is always visible in 100% on the current screen
+void VmTaskList::setVisible(bool visible) {
+    if(visible) {
+        if(parentWidget() != nullptr) {
+            const int maxX = screen()->geometry().right();
+            if(maxX < x() + width())
+                move(maxX - width(), y());
+        }
+    }
+
+    QDialog::setVisible(visible);
+}

@@ -51,7 +51,7 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
 
         m_layout->addWidget(m_tasksButton, 0, 5);
         m_tasksButton->setMaximumWidth(m_tasksButton->height());
-        m_vmTaskList = new VmTaskList(m_vm->m_tasks);
+        m_vmTaskList = new VmTaskList(m_vm->m_tasks, this);
         m_vmTaskList->setMaximumSize(256, 368);
         m_vmTaskList->setMinimumSize(256, 0);
     }

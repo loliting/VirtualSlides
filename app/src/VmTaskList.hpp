@@ -33,6 +33,7 @@ public:
     VmTaskList(const QList<Task*> &tasks, QWidget *parent = nullptr);
     ~VmTaskList() = default;
 
+    void setVisible(bool visible);
 public slots:
     void updateTasksProgress();
 private:
