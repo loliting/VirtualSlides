@@ -57,6 +57,8 @@ fn main() -> Result<()> {
     mount_sys_dirs()?;
     set_hostname()?;
 
+    // let mut bridge = HostBridge::new()?;
+    // dbg!(bridge.message_host(RequestType::GetTasks)?.tasks);
 
     let env = [
         ("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),

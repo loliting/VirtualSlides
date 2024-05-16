@@ -5,6 +5,7 @@
 /guest/*.tar
 /build
 /guest/Dockerfiles/*/vs_init
+/guest/Dockerfiles/*/vs_run
 
 # Rust
 /guest/init/target/

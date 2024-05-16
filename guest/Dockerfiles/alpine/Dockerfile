@@ -23,4 +23,6 @@ RUN ln -sf /sbin/vs_init /sbin/reboot
 RUN ln -sf /sbin/vs_init /sbin/poweroff
 RUN ln -sf /sbin/vs_init /sbin/shutdown
 
+COPY vs_run /sbin/vs_run
+
 RUN if [[ $DEBUG -eq 1 ]] ; then ln -sf /sbin/vs_init /sbin/vs_test ; fi

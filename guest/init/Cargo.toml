@@ -1,7 +1,15 @@
 [package]
-name = "guest-init"
+name = "vs_init"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "vs_run"
+path = "src/vs_run.rs"
+
+[[bin]]
+name = "vs_init"
+path = "src/vs_init.rs"
 
 [dependencies]
 serde_json = "1.0"
