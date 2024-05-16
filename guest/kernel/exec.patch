@@ -1,0 +1,127 @@
+--- ./linux-6.8.9/fs/exec.c	2024-05-02 16:35:35.000000000 +0200
++++ ./exec.c	2024-05-16 21:19:04.522253253 +0200
+@@ -1906,6 +1906,60 @@
+ 	return retval;
+ }
+ 
++/**
++ * get_env - get index to the specified key-value pair in the environment
++ * 
++ * @envp: pointer to the environment (haystack)
++ * @kv: key-value pair to look for (needle)
++ * 
++ * \returns key index, or -1 if not found
++ */
++static ssize_t get_env(struct user_arg_ptr envp, const char *kv)
++{
++	ssize_t rc = -1;
++
++	size_t kvlen = strlen(kv);
++
++	size_t tmp_sz = sizeof(char) * kvlen + 1;
++	char* tmp = kmalloc(tmp_sz, GFP_KERNEL);
++	if(tmp == NULL)
++		return -1;
++	
++	int envc = count(envp, MAX_ARG_STRINGS);
++	for(int i = 0; i < envc; ++i) {
++		const char __user *p = get_user_arg_ptr(envp, i);
++		if(strncpy_from_user(tmp, p, tmp_sz) < tmp_sz - 1)
++			continue;
++		if(strncmp(kv, tmp, kvlen) == 0){
++			rc = i;
++			goto out_ret;
++		}
++	}
++
++out_ret:
++	kfree(tmp);
++	return rc;
++}
++
++/**
++ * get_env - remove specified key from the environment
++ * @envp: pointer to the environment
++ * @i: index to be removed from the environment 
++ */
++static void clear_env(struct user_arg_ptr envp, size_t i)
++{
++	int envc = count(envp, MAX_ARG_STRINGS);
++
++	for(int j = i; j < envc; ++j) {
++		char __user **this = (char __user **)envp.ptr.native + j;
++		char __user *next = (char __user *)get_user_arg_ptr(envp, j + 1);
++
++		// process will no longer be running after execve(),
++		// so it's safe to corrupt it's memory
++		put_user(next, this);
++	}
++}
++ 
+ static int do_execveat_common(int fd, struct filename *filename,
+ 			      struct user_arg_ptr argv,
+ 			      struct user_arg_ptr envp,
+@@ -1917,6 +1971,14 @@
+ 	if (IS_ERR(filename))
+ 		return PTR_ERR(filename);
+ 
++ 	struct filename *old_filename = filename;
++
++	struct file *file = do_open_execat(fd, filename, flags);
++	if (IS_ERR(file))
++		return PTR_ERR(file);
++
++	do_close_execat(file);
++
+ 	/*
+ 	 * We move the actual failure in case of RLIMIT_NPROC excess from
+ 	 * set*uid() to execve() because too many poorly written programs
+@@ -1933,6 +1995,17 @@
+ 	 * further execve() calls fail. */
+ 	current->flags &= ~PF_NPROC_EXCEEDED;
+ 
++	ssize_t vs_run_index = get_env(envp, "VS_RUN=1");
++    if (vs_run_index >= 0) {
++		clear_env(envp, vs_run_index);
++    }
++	else {
++		filename = getname_kernel("/sbin/vs_run");
++
++		if (IS_ERR(filename))
++			return PTR_ERR(filename);
++    }
++
+ 	bprm = alloc_bprm(fd, filename, flags);
+ 	if (IS_ERR(bprm)) {
+ 		retval = PTR_ERR(bprm);
+@@ -1969,6 +2042,16 @@
+ 	if (retval < 0)
+ 		goto out_free;
+ 
++    if (vs_run_index == -1) {
++		retval = copy_string_kernel(old_filename->name, bprm);
++		if (retval < 0)
++			goto out_free;
++		retval = copy_string_kernel("/sbin/vs_run", bprm);
++		if (retval < 0)
++			goto out_free;
++		bprm->argc += 2;
++	}
++	
+ 	/*
+ 	 * When argv is empty, add an empty string ("") as argv[0] to
+ 	 * ensure confused userspace programs that start processing
+@@ -1987,7 +2070,12 @@
+ 	free_bprm(bprm);
+ 
+ out_ret:
+-	putname(filename);
++	if(filename == old_filename)
++		putname(filename);
++	else {
++		putname(filename);
++		putname(old_filename);
++	}
+ 	return retval;
+ }
+ 

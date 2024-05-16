@@ -11,8 +11,9 @@ on_error () {
 
 pushd $(dirname $(readlink -f $0)) >> /dev/null
 
-# Linux 6.7.8 is the lastest stable release as of 30.03.2024
-LINUX_VER="${VS_LINUX_VER:-"6.8.2"}"
+# Linux 6.8.9 is the lastest stable release as of 16.05.2024, the minimum
+# required version is 6.8 (because of the `fs/exec.c` patch compatibility)
+LINUX_VER="${VS_LINUX_VER:-"6.8.9"}"
 KERNEL_URL=https://cdn.kernel.org/pub/linux/kernel/v$(echo $LINUX_VER | head -c 1).x/linux-$LINUX_VER.tar.xz
 
 
@@ -25,6 +26,9 @@ if [ ! -d "linux-$LINUX_VER" ]; then
     tar -xf linux-$LINUX_VER.tar.xz
     on_error 'tar failed'
 
+    # Patch to add vs_run prefix to every command
+    patch -F 30 ./linux-$LINUX_VER/fs/exec.c ./exec.patch
+    on_error 'patch failed'
 fi
 
 cp defconfig linux-$LINUX_VER/.config
