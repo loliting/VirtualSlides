@@ -1,17 +1,15 @@
-mod machine_manager;
-mod host_bridge;
-
 use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
 use anyhow::Result;
-use crate::machine_manager::*;
+use vs_init::machine_manager::*;
 
-#[cfg(not(debug_assertions))]
 use std::process;
 
-#[cfg(debug_assertions)]
-use crate::host_bridge::{HostBridge, RequestType};
+const ENV: [(&str, &str); 2] = [
+    ("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+    ("TERM", "xterm-256color")
+];
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -24,16 +22,8 @@ fn main() -> Result<()> {
         poweroff()?;
         exit(0);
     }
-    
-    
-    #[cfg(debug_assertions)]
-    if args[0].contains("vs_test") {
-        let mut bridge = HostBridge::new()?;
-        bridge.message_host(RequestType::DownloadTest)?;
-        exit(0);
-    }
-    
-    #[cfg(not(debug_assertions))]
+
+
     if process::id() != 1 {
         eprintln!("{}: must be run as PID 1", args[0]);
         exit(1);
@@ -43,33 +33,17 @@ fn main() -> Result<()> {
         exit(1);
     }
 
-    if is_machine_initializated() {
-        println!("Machine is initializated!");
-    } else {
-        println!("Machine is not initializated!");
-        
-        query_hostname()?;
+    system_init()?;
 
-        set_machine_initializated(true)?;
-        install_files()?;
-        exec_init_scripts()?;
+    if is_first_boot() {
+        first_boot_initialization()?;
     }
-    mount_sys_dirs()?;
-    set_hostname()?;
-
-    // let mut bridge = HostBridge::new()?;
-    // dbg!(bridge.message_host(RequestType::GetTasks)?.tasks);
-
-    let env = [
-        ("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-        ("TERM", "xterm-256color")
-    ];
 
     /* Actual init system starts as a PID 1 */
     println!("{}: Starting {}...", args[0], args[1]);
     let exec_err = Command::new(&args[1])
         .env_clear()
-        .envs(env)
+        .envs(ENV)
         .args(&args[2..])
         .exec();
     eprintln!("exec() failed: {}", exec_err);

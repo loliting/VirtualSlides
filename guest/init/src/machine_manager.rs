@@ -1,54 +1,37 @@
-use std::fs::File;
-use std::io::{ErrorKind, Read, Write};
+use std::path::Path;
+use std::fs::{File, remove_file};
+use std::io::{Read, Write};
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
 use nix::mount::{mount, MsFlags};
-use serde_json::Value;
 use anyhow::Result;
 
 use crate::host_bridge::*;
 
-const CONFIG_PATH: &str = "/etc/vs.json";
-
-pub fn is_machine_initializated() -> bool {
-    let config = match File::open(CONFIG_PATH) {
-            Ok(f) => f,
-            Err(err) => {
-                if err.kind() != ErrorKind::NotFound {
-                    eprintln!("Failed to open: {}: {:?}", CONFIG_PATH, err);
-                }
-                return false;
-            }
-    };
-
-    let config_json: Value = match serde_json::from_reader(config) {
-        Ok(v) => v,
-        Err(err) => {
-            eprintln!("Failed to parse {CONFIG_PATH}: {}", err.to_string());
-            return false;
-        }
-    };
-
-    match config_json["initializated"].as_bool() {
-        Some(b) => b,
-        None => {
-            eprintln!("Failed to parse {CONFIG_PATH}: {}",
-                "Field \"initializated\" eiher isn't a boolean or it doesn't exist.");
-            false
-        }
-    }
+pub fn set_hostname(hostname: String) -> Result<()> {
+    sethostname(hostname.lines().next().unwrap_or("UNKNOWN"))?;
+    
+    Ok(())
 }
 
-pub fn set_machine_initializated(value: bool) -> Result<()> {
-    let mut config = File::options()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(CONFIG_PATH)?;
-    let message = serde_json::json!({"initializated": value});
-    config.write_all(serde_json::to_string_pretty(&message)?.as_bytes())?;
+pub fn set_hostname_from_file() -> Result<()> {
+    let mut hostname_file = File::open("/etc/hostname")?;
 
+    let mut hostname = String::new();
+    hostname_file.read_to_string(&mut hostname)?;
+    
+    set_hostname(hostname)?;
+    
     Ok(())
+}
+
+pub fn system_init() -> Result<()> {
+    mount_sys_dirs()?;
+    set_hostname_from_file()
+}
+
+pub fn is_first_boot() -> bool {
+    return Path::new("/firstboot").exists();
 }
 
 pub fn poweroff() -> Result<()> {
@@ -59,40 +42,8 @@ pub fn poweroff() -> Result<()> {
 }
 
 pub fn reboot() -> Result<()> {
-    let mut hb = HostBridge::new()?;
-    hb.message_host(RequestType::Reboot)?;
+    HostBridge::new()?.message_host(RequestType::Reboot)?;
     poweroff()
-}
-
-pub fn set_hostname() -> Result<()> {
-    let mut hostname_file = File::open("/etc/hostname")?;
-
-    let mut hostname = String::new();
-    hostname_file.read_to_string(&mut hostname)?;
-    
-    sethostname(hostname.lines().next().unwrap_or("UNKNOWN"))?;
-    
-    Ok(())
-}
-
-pub fn query_hostname() -> Result<()> {
-    let mut hb = HostBridge::new()?;
-
-    let hostname = match hb.message_host(RequestType::GetHostname)?.hostname {
-        Some(hostname) => hostname,
-        None => String::new()
-    };
-    
-    if !hostname.is_empty() {
-        let mut hostname_file = File::options()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open("/etc/hostname")?;
-    
-        hostname_file.write_all(hostname.as_bytes())?;
-    }
-    Ok(())
 }
 
 pub fn mount_sys_dirs() -> Result<()> {
@@ -114,24 +65,7 @@ pub fn mount_sys_dirs() -> Result<()> {
     Ok(())
 }
 
-pub fn install_files() -> Result<()> {
-    let mut hb = HostBridge::new()?;
-
-    let files = match hb.message_host(RequestType::GetInstallFiles)?.install_files {
-        Some(install_files) => install_files,
-        None => {
-            return Ok(())
-        }
-    };
-
-    for mut file in files {
-        file.install()?;
-    }
-
-    Ok(())
-}
-
-pub fn exec_init_scripts() -> Result<()> {
+pub fn first_boot_initialization() -> Result<()> {
     let mut hb = HostBridge::new()?;
 
     let init_scripts = match hb.message_host(RequestType::GetInitScripts)?.init_scripts {
@@ -140,10 +74,40 @@ pub fn exec_init_scripts() -> Result<()> {
             return Ok(())
         }
     };
+    
+    let install_files = match hb.message_host(RequestType::GetInstallFiles)?.install_files {
+        Some(install_files) => install_files,
+        None => {
+            return Ok(())
+        }
+    };
 
+    let hostname = match hb.message_host(RequestType::GetHostname)?.hostname {
+        Some(hostname) => hostname,
+        None => String::new()
+    };
+    
     for mut init_script in init_scripts {
         init_script.exec()?;
     }
+
+    for mut file in install_files {
+        file.install()?;
+    }
+    
+    if !hostname.is_empty() {
+        let mut hostname_file = File::options()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open("/etc/hostname")?;
+    
+        hostname_file.write_all(hostname.as_bytes())?;
+
+        set_hostname(hostname)?;
+    }
+
+    remove_file("/firstboot")?;
 
     Ok(())
 }
