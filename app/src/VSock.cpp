@@ -136,7 +136,8 @@ qint64 VSock::writeData(const char *data, qint64 maxSize) {
     m_writeBuffor += QByteArray(data, maxSize);
 
     handleWriteAvaliable();
-    m_writeNotifier->setEnabled(!m_writeBuffor.isEmpty());
+    if(m_writeNotifier)
+        m_writeNotifier->setEnabled(!m_writeBuffor.isEmpty());
 
     return maxSize;
 }
@@ -183,10 +184,9 @@ bool VSock::handleWriteAvaliable() {
         m_writeBuffor.remove(0, writtenBytes);
     
     if(errno != EAGAIN && errno != 0) {
-        if(errno == EPIPE || errno == ECONNRESET){
-            close();
+        close();
+        if(errno == EPIPE || errno == ECONNRESET)
             return false;
-        }
         m_err = errno;
         setErrorString(strerror(m_err));
         emit errorOccurred(m_err);
