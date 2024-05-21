@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::fs::{File, remove_file};
+use std::os::unix::fs::symlink;
 use std::io::{Read, Write};
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
@@ -27,7 +28,10 @@ pub fn set_hostname_from_file() -> Result<()> {
 
 pub fn system_init() -> Result<()> {
     mount_sys_dirs()?;
-    set_hostname_from_file()
+    set_hostname_from_file()?;
+    setup_symlinks()?;
+
+    Ok(())
 }
 
 pub fn is_first_boot() -> bool {
@@ -108,6 +112,23 @@ pub fn first_boot_initialization() -> Result<()> {
     }
 
     remove_file("/firstboot")?;
+
+    Ok(())
+}
+
+fn force_symlink<S: AsRef<Path> + ?Sized>(orginal: &S, link: &S) -> Result<()> {
+    if link.as_ref().exists() {
+        remove_file(link)?;
+    }
+    symlink(orginal, link)?;
+    
+    Ok(())
+}
+
+pub fn setup_symlinks() -> Result<()> {
+    force_symlink("/sbin/vs_init", "/sbin/reboot")?;
+    force_symlink("/sbin/vs_init", "/sbin/poweroff")?;
+    force_symlink("/sbin/vs_init", "/sbin/shutdown")?;
 
     Ok(())
 }
