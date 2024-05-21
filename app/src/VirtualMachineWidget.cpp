@@ -144,18 +144,15 @@ void VirtualMachineWidget::handleVmStarted() {
         m_terminalCopyAction->deleteLater();
         m_terminalCopyAction = nullptr;
     }
-
     if(m_terminalPasteAction) {
         m_terminalPasteAction->deleteLater();
         m_terminalPasteAction = nullptr;
     }
 
-
     if(m_terminalZoomInAction) {
         m_terminalZoomInAction->deleteLater();
         m_terminalZoomInAction = nullptr;
     }
-
     if(m_terminalZoomOutAction) {
         m_terminalZoomOutAction->deleteLater();
         m_terminalZoomOutAction = nullptr;
@@ -166,6 +163,7 @@ void VirtualMachineWidget::handleVmStarted() {
 
     m_terminalZoomInAction = new QAction("Zoom In");
     m_terminalZoomOutAction = new QAction("Zoom Out");
+    m_terminalSearchAction = new QAction("Find");
 
     m_terminalCopyAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
     m_terminalPasteAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
@@ -173,13 +171,18 @@ void VirtualMachineWidget::handleVmStarted() {
     m_terminalZoomInAction->setShortcut(QKeySequence("Ctrl++"));
     m_terminalZoomOutAction->setShortcut(QKeySequence("Ctrl+-"));
 
+    m_terminalSearchAction->setShortcut(QKeySequence("Ctrl+F"));
+
     m_terminalZoomInAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     m_terminalZoomOutAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     m_terminalCopyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     m_terminalPasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    m_terminalSearchAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 
     m_terminal->addAction(m_terminalCopyAction);
     m_terminal->addAction(m_terminalPasteAction);
+
+    m_terminal->addAction(m_terminalSearchAction);
 
     m_terminal->addAction(m_terminalZoomInAction);
     m_terminal->addAction(m_terminalZoomOutAction);
@@ -196,6 +199,10 @@ void VirtualMachineWidget::handleVmStarted() {
     );
     connect(m_terminalZoomOutAction, &QAction::triggered,
         m_terminal, &QTermWidget::zoomOut
+    );
+
+    connect(m_terminalSearchAction, &QAction::triggered,
+        m_terminal, &QTermWidget::toggleShowSearchBar
     );
 
 

@@ -39,6 +39,8 @@ private:
     QAction* m_terminalZoomOutAction = nullptr;
     QAction* m_terminalZoomInAction = nullptr;
 
+    QAction* m_terminalSearchAction = nullptr;
+
     VmTaskList* m_vmTaskList = nullptr;
 private slots:
     void handleNetworkChanged();
