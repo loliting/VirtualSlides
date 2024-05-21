@@ -30,6 +30,8 @@ Application* Application::Instance(int &argc, char* argv[]) {
     }
 
     m_sharedMem = new QSharedMemory("virtual-slides.pid");
+    m_sharedMem->attach(QSharedMemory::ReadOnly);
+    m_sharedMem->detach();
     if(m_sharedMem->attach(QSharedMemory::ReadOnly) || !m_sharedMem->create(1)) {
         m_sharedMem->detach();
         QMessageBox msgBox(
@@ -61,7 +63,7 @@ void Application::CleanUp() {
 
 PresentationWindow* Application::addWindow(QString presentationPath){
     Presentation* presentation;
-    try{
+    try {
         presentation = new Presentation(presentationPath);
     }
     catch(PresentationException &e){
