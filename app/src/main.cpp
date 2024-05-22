@@ -11,6 +11,7 @@ int main(int argc, char* argv[]) {
     }
     
     if(app->addWindow(argv[1]) == nullptr){
+        Application::CleanUp();
         exit(1);
     }
 
