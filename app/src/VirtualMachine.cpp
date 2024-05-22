@@ -239,8 +239,10 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
     for(auto initScriptObj : vmObject["initScripts"])
         m_initScripts += InitScript(initScriptObj, pres);
     
-    for(auto taskObj : vmObject["tasks"])
-        m_tasks += new Task(taskObj);
+    for(auto taskObj : vmObject["tasks"]){
+        Task* task = new Task(taskObj); 
+        m_tasks[task->id] = task;
+    }
     
     m_guestBridge = new GuestBridge(this);
     m_guestBridge->start();

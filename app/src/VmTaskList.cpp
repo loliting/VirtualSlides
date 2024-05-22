@@ -4,7 +4,7 @@
 
 #include "VirtualMachine.hpp"
 
-VmTaskList::VmTaskList(const QList<Task*> &tasks, QWidget *parent)
+VmTaskList::VmTaskList(const QMap<std::string, Task *> &tasks, QWidget *parent)
     : QDialog(parent), m_tasks(tasks)
 {
     setLayout(m_layout);

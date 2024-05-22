@@ -130,7 +130,7 @@ private:
     QList<InstallFile> m_installFiles;
     QList<InitScript> m_initScripts;
 
-    QList<Task*> m_tasks;
+    QMap<std::string, Task*> m_tasks;
 
     QTemporaryFile m_imageFile;
 

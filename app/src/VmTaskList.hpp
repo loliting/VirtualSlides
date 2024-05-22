@@ -30,7 +30,7 @@ class VmTaskList : public QDialog
 {
     Q_OBJECT
 public:
-    VmTaskList(const QList<Task*> &tasks, QWidget *parent = nullptr);
+    VmTaskList(const QMap<std::string, Task *> &tasks, QWidget *parent = nullptr);
     ~VmTaskList() = default;
 
     void setVisible(bool visible);
@@ -39,7 +39,7 @@ public slots:
 private:
     bool eventFilter(QObject *object, QEvent *event);
 private:
-    const QList<Task*> &m_tasks;
+    const QMap<std::string, Task *> &m_tasks;
 
     QVBoxLayout* m_layout = new QVBoxLayout(this);
 
