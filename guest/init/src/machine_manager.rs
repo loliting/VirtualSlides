@@ -74,16 +74,12 @@ pub fn first_boot_initialization() -> Result<()> {
 
     let init_scripts = match hb.message_host(RequestType::GetInitScripts)?.init_scripts {
         Some(init_scripts) => init_scripts,
-        None => {
-            return Ok(())
-        }
+        None => Vec::new()
     };
     
     let install_files = match hb.message_host(RequestType::GetInstallFiles)?.install_files {
         Some(install_files) => install_files,
-        None => {
-            return Ok(())
-        }
+        None => Vec::new()
     };
 
     let hostname = match hb.message_host(RequestType::GetHostname)?.hostname {
