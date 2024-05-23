@@ -5,10 +5,9 @@
 using namespace nlohmann;
 
 
-GuestBridge::GuestBridge(VirtualMachine* vm) : QObject(vm) {
-    m_vm = vm;
+GuestBridge::GuestBridge(VirtualMachine* vm) : QObject(vm), m_vm(vm)
+{
 
-    m_server = new VSockServer(this);
 }
 
 GuestBridge::~GuestBridge() {
@@ -19,19 +18,24 @@ bool GuestBridge::start() {
     if(m_started)
         return true;
 
-    if(!m_server->listen(VSockServer::Host, m_vm->m_cid)){
+    m_server = new VSockServer(this);
+
+    if(!m_server->listen(VSockServer::Host, m_vm->m_cid)) {
         qWarning() << "VSockServer failed:" << m_server->errorString();
         return false;
     }
 
-    connect(m_server, &VSockServer::newConnection, this, [=] {
+    connect(m_server, &VSockServer::newConnection, this, [this] {
         VSock* sock = m_server->nextPendingConnection();
-        connect(sock, &VSock::readyRead, [=] {
+        connect(sock, &VSock::readyRead, [sock, this] {
             handleVmSockReadReady(sock);
         });
-        connect(sock, &VSock::errorOccurred, [=] {
+        connect(sock, &VSock::errorOccurred, [sock] {
             qWarning() << "An error occurred on vsock:" << sock->errorString();
             sock->close();
+            sock->deleteLater();
+        });
+        connect(sock, &VSock::disconnected, [sock] {
             sock->deleteLater();
         });
     });
@@ -45,12 +49,13 @@ bool GuestBridge::isListening() {
 }
 
 void GuestBridge::stop() {
-    if(!m_started)
+    if (!m_started)
         return;
     
     m_server->close();
-    if(m_server){
+    if (m_server) {
         m_server->deleteLater();
+        m_server = nullptr;
     }
     m_started = false;
 }
@@ -68,12 +73,12 @@ static json installFileToJson(InstallFile* installFile){
 
 void GuestBridge::parseRequest(VSock* sock, QString request) {
     std::string requestType;
-    json response;
-    try{
-        json jsonRequest = json::parse(request.toStdString());
+    json response, jsonRequest;
+    try {
+        jsonRequest = json::parse(request.toStdString());
         requestType = jsonRequest["type"];
     }
-    catch(std::exception &e){
+    catch (std::exception &e) {
         response.update(statusResponse(ResponseStatus::Err, e.what()));
         QMessageBox msgBox(QMessageBox::Critical,
             "Virtual Slides",
@@ -82,30 +87,30 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         msgBox.exec();
     }
 
-    if (requestType.empty()){ }
-    else if(requestType == "reboot"){
+    if (requestType.empty()) { }
+    else if (requestType == "reboot") {
         m_vm->m_shouldRestart = true;
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "downloadTest") {
+    else if (requestType == "downloadTest") {
         response["downloadTest"] = std::string(1024 * 1024 * 32, 'a');
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "getHostname") {
+    else if (requestType == "getHostname") {
         response["hostname"] = m_vm->m_hostname.toStdString();
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "getInstallFiles") {
+    else if (requestType == "getInstallFiles") {
         std::vector<json> installFiles;
-        for(auto &installFile : m_vm->m_installFiles)
+        for (auto &installFile : m_vm->m_installFiles)
             installFiles.push_back(installFileToJson(&installFile));
         
         response["installFiles"] = installFiles;
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "getInitScripts") {
+    else if (requestType == "getInitScripts") {
         std::vector<json> initScripts;
-        for(auto &initScript : m_vm->m_initScripts){
+        for (auto &initScript : m_vm->m_initScripts) {
             json json;
             json["content"] = initScript.content;
             initScripts.push_back(json);
@@ -114,13 +119,41 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         response["initScripts"] = initScripts;
         response.update(statusResponse(ResponseStatus::Ok));
     }
-    else if(requestType == "getTasks") {
+    else if (requestType == "getTasks") {
         std::vector<json> tasks;
-        for(auto &task : m_vm->m_tasks)
+        for (auto &task : m_vm->m_tasks)
             tasks.push_back(task->toJson());
 
         response["tasks"] = tasks;
         response.update(statusResponse(ResponseStatus::Ok));
+    }
+    else if (requestType == "finishSubtask") {
+        json taskId = jsonRequest["taskId"];
+        json subtaskId = jsonRequest["subtaskId"];
+        Task* task = nullptr;
+        Subtask* subtask = nullptr;
+        if(!taskId.is_string() || !subtaskId.is_string()) {
+            response.update(statusResponse(ResponseStatus::Err, 
+                "Recived request of type \"finishSubtask\" does not contain " 
+                "\"taskId\" and/or \"subtaskId\" field(s)"
+            ));
+        }
+        else {
+            task = m_vm->m_tasks[taskId];
+            if(task)
+                subtask = task->subtasks[subtaskId];
+        }
+
+        if(task && subtask){
+            subtask->done = true;
+            response.update(statusResponse(ResponseStatus::Ok));
+        }
+        else {
+            response.update(statusResponse(ResponseStatus::Err, 
+                "Recived request of type \"finishSubtask\" contains " 
+                "nonexistant taskId/subtaskId pair"
+            ));
+        }
     }
     else {
         std::string err = "Unknown request type: \"" + requestType + "\"";
@@ -129,19 +162,12 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
 
     QByteArray jsonResponseStr = QByteArray::fromStdString(response.dump()) + "\x1e";
     sock->write(jsonResponseStr);
-    connect(sock, &VSock::bytesWritten, this, [=] {
-        if(sock->bytesToWrite() <= 0){
-            sock->close();
-            sock->disconnect();
-            sock->deleteLater();
-        }
-    });
 }
 
 void GuestBridge::handleVmSockReadReady(VSock* sock) {
     requestStr += sock->readAll();
 
-    while(requestStr.contains("\x1e") != false){
+    while (requestStr.contains("\x1e") != false) {
         QString request = requestStr;
         request.truncate(requestStr.indexOf("\x1e"));
         parseRequest(sock, request);
