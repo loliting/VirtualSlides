@@ -2,6 +2,7 @@
 
 mod install_file;
 mod init_script;
+mod task;
 
 use std::io::{BufRead, BufReader, Write};
 use std::time::Duration;
@@ -16,6 +17,7 @@ use vsock::{get_local_cid, VsockAddr, VsockStream};
 
 pub use install_file::InstallFile;
 pub use init_script::InitScript;
+pub use task::*;
 
 pub struct HostBridge {
     stream: VsockStream
@@ -29,16 +31,17 @@ pub enum RequestType {
     GetHostname,
     GetInstallFiles,
     GetInitScripts,
+    GetTasks,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 enum Status {
     Ok,
     Err
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Response {
     pub(in self) status: Status,
@@ -47,6 +50,7 @@ pub struct Response {
     pub hostname: Option<String>,
     pub install_files: Option<Vec<InstallFile>>,
     pub init_scripts: Option<Vec<InitScript>>,
+    pub tasks: Option<Vec<Task>>,
 }
 
 impl HostBridge {
