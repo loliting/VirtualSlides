@@ -6,6 +6,25 @@
 #include "Network.hpp"
 #include "VmTaskList.hpp"
 
+TerminalEventFilter::TerminalEventFilter(VirtualMachineWidget* w, QTermWidget* term)
+    : QObject(w), m_vmWidget(w), m_termWidget(term)
+{
+
+}
+
+bool TerminalEventFilter::eventFilter(QObject *obj, QEvent *e) {
+    if(obj == m_termWidget && e->type() == QEvent::Resize) {
+        QEvent *event = new QEvent(QEvent::User);
+        QCoreApplication::postEvent(obj, event);
+    }
+    else if(obj == m_termWidget && e->type() == QEvent::User) {
+        m_vmWidget->registerSize();
+        return true;
+    }
+
+    return QObject::eventFilter(obj, e);
+}
+
 VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     : QWidget(parent)
 {
@@ -76,6 +95,12 @@ VirtualMachineWidget::~VirtualMachineWidget() {
         m_terminalZoomInAction->deleteLater();
     if(m_terminalZoomOutAction)
         m_terminalZoomOutAction->deleteLater();
+    if(m_terminalSearchAction)
+        m_terminalSearchAction->deleteLater();
+    if(m_termEventFilter) {
+        m_termEventFilter->deleteLater();
+        m_termEventFilter = nullptr;
+    }
     if(m_terminal) {
         m_terminal->close();
         m_terminal->deleteLater();
@@ -158,6 +183,11 @@ void VirtualMachineWidget::handleVmStarted() {
         m_terminalZoomOutAction = nullptr;
     }
 
+    if(m_termEventFilter) {
+        m_termEventFilter->deleteLater();
+        m_termEventFilter = nullptr;
+    }
+
     m_terminalCopyAction = new QAction("Copy");
     m_terminalPasteAction = new QAction("Paste");
 
@@ -194,11 +224,17 @@ void VirtualMachineWidget::handleVmStarted() {
         m_terminal, &QTermWidget::pasteClipboard
     );
 
-    connect(m_terminalZoomInAction, &QAction::triggered, 
-        m_terminal, &QTermWidget::zoomIn
+    connect(m_terminalZoomInAction, &QAction::triggered,
+        this, [this] {
+            this->m_terminal->zoomIn();
+            this->registerSize();
+        }
     );
     connect(m_terminalZoomOutAction, &QAction::triggered,
-        m_terminal, &QTermWidget::zoomOut
+        this, [this] {
+            this->m_terminal->zoomOut();
+            this->registerSize();
+        }
     );
 
     connect(m_terminalSearchAction, &QAction::triggered,
@@ -211,6 +247,10 @@ void VirtualMachineWidget::handleVmStarted() {
     m_terminal->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     m_terminal->startShellProgram();
+    
+    m_termEventFilter = new TerminalEventFilter(this, m_terminal);
+    m_terminal->installEventFilter(m_termEventFilter);
+    registerSize();
 }
 
 void VirtualMachineWidget::displayTaskList() {
@@ -221,4 +261,13 @@ void VirtualMachineWidget::displayTaskList() {
     m_vmTaskList->updateTasksProgress();
     
     m_vmTaskList->show();
+}
+
+void VirtualMachineWidget::registerSize() {
+    if(!m_vm || !m_terminal)
+        return;
+    
+    m_vm->registerWidget(this, QSize(m_terminal->screenColumnsCount(),
+        m_terminal->screenLinesCount()
+    ));
 }

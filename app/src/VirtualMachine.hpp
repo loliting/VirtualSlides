@@ -20,6 +20,7 @@
 class Network;
 class GuestBridge;
 class Presentation;
+class VirtualMachineWidget;
 
 class VirtualMachineException : public std::exception
 {
@@ -104,12 +105,15 @@ class VirtualMachine : public QObject
     Q_OBJECT
     Q_PROPERTY(Network* net READ net WRITE setNet NOTIFY networkChanged);
 public:
+    ~VirtualMachine();
+
     QString id() const { return m_id; }
     Network* net() const { return m_net; }
     uint32_t cid() const { return m_cid; }
     QString serverName() const { return m_serverName; }
     void setNet(Network* net);
-    ~VirtualMachine();
+
+    void registerWidget(VirtualMachineWidget *w, QSize size);
 private:
     VirtualMachine(nlohmann::json &vmObject, Presentation* pres);
     VirtualMachine(QString id, Network* net, bool wan, QString image, Presentation* pres);
@@ -146,6 +150,9 @@ private:
 
     GuestBridge* m_guestBridge = nullptr;
     uint32_t m_cid;
+
+    QMap<VirtualMachineWidget*, QSize> m_widgetSizes;
+    QSize m_minimumWidgetSize = QSize(128, 32);
 
     Presentation* m_presentation;
 signals:

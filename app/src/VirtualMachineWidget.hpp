@@ -13,6 +13,18 @@
 
 class VmTaskList;
 
+class TerminalEventFilter : public QObject
+{
+    Q_OBJECT
+public:
+    TerminalEventFilter(VirtualMachineWidget* w, QTermWidget* term);
+protected:
+    bool eventFilter(QObject *obj, QEvent *e) override;
+private:
+    VirtualMachineWidget* m_vmWidget;
+    QTermWidget* m_termWidget;
+};
+
 class VirtualMachineWidget : public QWidget
 {
     Q_OBJECT
@@ -42,12 +54,15 @@ private:
     QAction* m_terminalSearchAction = nullptr;
 
     VmTaskList* m_vmTaskList = nullptr;
+    TerminalEventFilter* m_termEventFilter = nullptr;
 private slots:
     void handleNetworkChanged();
     void handleVmStopped();
     void handleVmStarted();
     void displayTaskList();
 public slots:
+    void registerSize();
+
     void startVm();
     void stopVm();
     void restartVm();

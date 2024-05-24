@@ -288,9 +288,9 @@ void VirtualMachine::createImageFile(){
 QStringList VirtualMachine::getArgs(){
     QStringList ret;
     ret << "-machine" << "microvm,acpi=off";
-    if(Config::getKvmEnabled()){
+    if(Config::getKvmEnabled())
         ret << "-enable-kvm" << "-cpu" << "host";
-    }
+
     ret << "-smp" << QString::number(Config::getGuestProcCount())
         << "-m" << QString::number(Config::getGuestMemSize()) + "M"
         << "-mem-prealloc" << "-no-reboot"
@@ -303,14 +303,12 @@ QStringList VirtualMachine::getArgs(){
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root"
         << "-device" << "vhost-vsock-device,guest-cid=" + QString::number(m_cid);
-    if(m_net && !m_macAddress.isEmpty()){
+    if(m_net && !m_macAddress.isEmpty())
         ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=" VNET_MCAST_ADDR ":" + QString::number(m_net->mcastPort())
             << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
-    }
-    if(m_wan){
+    if(m_wan)
         ret << "-netdev" << "user,id=eth1,net=100.127.254.0/24,dhcpstart=100.127.254.8"
             << "-device" << "virtio-net-device,netdev=eth1,mac=00:00:00:00:00:01";
-    }
     
     return ret;
 }
@@ -463,4 +461,19 @@ VirtualMachine::~VirtualMachine() {
         delete task;
 
     m_tasks.clear();
+}
+
+void VirtualMachine::registerWidget(VirtualMachineWidget* w, QSize size) {
+    m_widgetSizes[w] = size;
+
+    int minW = INT_MAX, minH = INT_MAX;
+
+    for(auto &size : m_widgetSizes) {
+        if(size.width() < minW)
+            minW = size.width();
+        if(size.height() < minH)
+            minH  = size.height();
+    }
+
+    m_minimumWidgetSize = QSize(minW, minH);
 }

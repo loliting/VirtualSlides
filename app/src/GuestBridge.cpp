@@ -155,6 +155,12 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
             ));
         }
     }
+    else if (requestType == "getTermSize") {
+        response["termHeight"] = m_vm->m_minimumWidgetSize.height();
+        response["termWidth"] = m_vm->m_minimumWidgetSize.width();
+
+        response.update(statusResponse(ResponseStatus::Ok));
+    }
     else {
         std::string err = "Unknown request type: \"" + requestType + "\"";
         response.update(statusResponse(ResponseStatus::Err, err));
