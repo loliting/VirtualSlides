@@ -8,6 +8,7 @@ use regex::Regex;
 
 
 use vs_init::host_bridge::{CommandSubtask, HostBridge, RequestType};
+use vs_init::machine_manager::fix_term;
 
 fn compare_args(regex_args: &Vec<String>, args: &Vec<String>) -> bool {
     if args.len() - 1 != regex_args.len() {
@@ -109,6 +110,10 @@ fn main() {
         .args(&args[3..])
         .env("VS_RUN", "1");
     
+    if args[2].contains("sh") {
+        _ = fix_term();
+    }
+
     let subtask = get_matching_command_subtask(args[2..].to_vec());
 
     if subtask.is_some() {
