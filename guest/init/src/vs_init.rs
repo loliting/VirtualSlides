@@ -14,12 +14,16 @@ const ENV: [(&str, &str); 2] = [
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     
+    if args[0].contains("poweroff") || args[0].contains("shutdown") {
+        poweroff()?;
+        exit(0);
+    }
     if args[0].contains("reboot") {
         reboot()?;
         exit(0);
     }
-    if args[0].contains("poweroff") || args[0].contains("shutdown") {
-        poweroff()?;
+    if args[0].contains("vs_fixterm") {
+        fix_term()?;
         exit(0);
     }
 

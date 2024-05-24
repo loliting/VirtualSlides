@@ -32,6 +32,7 @@ pub enum RequestType {
     GetInstallFiles,
     GetInitScripts,
     GetTasks,
+    GetTermSize,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -51,6 +52,9 @@ pub struct Response {
     pub install_files: Option<Vec<InstallFile>>,
     pub init_scripts: Option<Vec<InitScript>>,
     pub tasks: Option<Vec<Task>>,
+
+    pub term_height: Option<u32>,
+    pub term_width: Option<u32>,
 }
 
 impl HostBridge {

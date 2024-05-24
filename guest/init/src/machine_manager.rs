@@ -2,6 +2,7 @@ use std::path::Path;
 use std::fs::{File, remove_file};
 use std::os::unix::fs::symlink;
 use std::io::{Read, Write};
+use std::process::Command;
 use nix::sys::reboot::{reboot as nix_reboot, RebootMode};
 use nix::unistd::{sync, sethostname};
 use nix::mount::{mount, MsFlags};
@@ -30,6 +31,7 @@ pub fn system_init() -> Result<()> {
     mount_sys_dirs()?;
     set_hostname_from_file()?;
     setup_symlinks()?;
+    fix_term()?;
 
     Ok(())
 }
@@ -125,6 +127,31 @@ pub fn setup_symlinks() -> Result<()> {
     force_symlink("/sbin/vs_init", "/sbin/reboot")?;
     force_symlink("/sbin/vs_init", "/sbin/poweroff")?;
     force_symlink("/sbin/vs_init", "/sbin/shutdown")?;
+    force_symlink("/sbin/vs_init", "/sbin/vs_fixterm")?;
+
+    Ok(())
+}
+
+pub fn fix_term() -> Result<()> {
+    let mut hb = HostBridge::new()?;
+    
+    let (height, width): (u32, u32);
+    
+    width = hb.message_host(RequestType::GetTermSize)?.term_width.unwrap();
+    height = hb.message_host(RequestType::GetTermSize)?.term_height.unwrap();
+    
+    /* TODO: change using stty program to appropriate ioctl() calls  */
+    Command::new("stty")
+        .arg("-F")
+        .arg("/dev/ttyS0")
+        .arg("cols")
+        .arg(width.to_string()).spawn()?.wait()?;
+
+    Command::new("stty")
+        .arg("-F")
+        .arg("/dev/ttyS0")
+        .arg("rows")
+        .arg(height.to_string()).spawn()?.wait()?;
 
     Ok(())
 }
