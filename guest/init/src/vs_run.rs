@@ -43,7 +43,7 @@ fn get_matching_command_subtask(args: Vec<String>) -> Option<CommandSubtask> {
         }
     };
 
-    let response = match hb.message_host(RequestType::GetTasks) {
+    let response = match hb.message_host_simple(RequestType::GetTasks) {
         Ok(response) => response,
         Err(_) => {
             return None;

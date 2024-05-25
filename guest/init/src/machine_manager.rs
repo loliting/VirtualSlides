@@ -48,7 +48,7 @@ pub fn poweroff() -> Result<()> {
 }
 
 pub fn reboot() -> Result<()> {
-    HostBridge::new()?.message_host(RequestType::Reboot)?;
+    HostBridge::new()?.message_host_simple(RequestType::Reboot)?;
     poweroff()
 }
 
@@ -74,17 +74,17 @@ pub fn mount_sys_dirs() -> Result<()> {
 pub fn first_boot_initialization() -> Result<()> {
     let mut hb = HostBridge::new()?;
 
-    let init_scripts = match hb.message_host(RequestType::GetInitScripts)?.init_scripts {
+    let init_scripts = match hb.message_host_simple(RequestType::GetInitScripts)?.init_scripts {
         Some(init_scripts) => init_scripts,
         None => Vec::new()
     };
     
-    let install_files = match hb.message_host(RequestType::GetInstallFiles)?.install_files {
+    let install_files = match hb.message_host_simple(RequestType::GetInstallFiles)?.install_files {
         Some(install_files) => install_files,
         None => Vec::new()
     };
 
-    let hostname = match hb.message_host(RequestType::GetHostname)?.hostname {
+    let hostname = match hb.message_host_simple(RequestType::GetHostname)?.hostname {
         Some(hostname) => hostname,
         None => String::new()
     };
@@ -137,8 +137,8 @@ pub fn fix_term() -> Result<()> {
     
     let (height, width): (u32, u32);
     
-    width = hb.message_host(RequestType::GetTermSize)?.term_width.unwrap();
-    height = hb.message_host(RequestType::GetTermSize)?.term_height.unwrap();
+    width = hb.message_host_simple(RequestType::GetTermSize)?.term_width.unwrap();
+    height = hb.message_host_simple(RequestType::GetTermSize)?.term_height.unwrap();
     
     /* TODO: change using stty program to appropriate ioctl() calls  */
     Command::new("stty")

@@ -6,13 +6,9 @@ mod task;
 
 use std::io::{BufRead, BufReader, Write};
 use std::time::Duration;
-#[cfg(debug_assertions)]
-use std::time::Instant;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use indicatif::ProgressBar;
-#[cfg(debug_assertions)]
-use indicatif::HumanBytes;
 use vsock::{get_local_cid, VsockAddr, VsockStream};
 
 pub use install_file::InstallFile;
@@ -23,7 +19,7 @@ pub struct HostBridge {
     stream: VsockStream
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum RequestType {
     Reboot,
@@ -33,6 +29,7 @@ pub enum RequestType {
     GetInitScripts,
     GetTasks,
     GetTermSize,
+    FinishSubtask,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -57,6 +54,16 @@ pub struct Response {
     pub term_width: Option<u32>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Request {
+    #[serde(rename = "type")]
+    pub request_type: RequestType,
+
+    pub task_id: Option<String>,
+    pub subtask_id: Option<String>,
+}
+
 impl HostBridge {
     pub fn new() -> Result<Self> {
         let cid = get_local_cid()?;
@@ -65,16 +72,14 @@ impl HostBridge {
         Ok(HostBridge { stream })
     }
 
-    fn write(&mut self, request: RequestType) -> Result<()> {
-        let mut message = serde_json::json!({"type": request}).to_string();
+    fn write(&mut self, request: Request) -> Result<()> {
+        let mut message = serde_json::json!(request).to_string();
         message.push_str("\x1e");
         self.stream.write(message.as_bytes())?;
         Ok(())
     }
     
     fn read(&mut self) -> Result<Response> {
-        #[cfg(debug_assertions)]
-        let now = Instant::now();
         let progress_bar = ProgressBar::new_spinner();
         
         progress_bar.enable_steady_tick(Duration::from_millis(150));
@@ -91,22 +96,21 @@ impl HostBridge {
             return Err(anyhow!(response.error.unwrap_or_default()));
         }
         
-        #[cfg(debug_assertions)]
-        {
-            let bytes_recived: u32 = buf.len() as u32;
-            let speed = bytes_recived as f64 / now.elapsed().as_secs_f64();
-            
-            println!("Read {} in: {:.2?} ({}/s)",
-                HumanBytes(bytes_recived as u64),
-                now.elapsed(),
-                HumanBytes(speed as u64)
-            );
-        }
-
         Ok(response)
     }
 
-    pub fn message_host(&mut self, request: RequestType) -> Result<Response> {
+    pub fn message_host_simple(&mut self, request_type: RequestType) -> Result<Response> {
+        let request = Request {
+            request_type,
+            task_id: None,
+            subtask_id: None
+        };
+
+        self.write(request)?;
+        Ok(self.read()?)
+    }
+
+    pub fn message_host(&mut self, request: Request) -> Result<Response> {
         self.write(request)?;
         Ok(self.read()?)
     }
