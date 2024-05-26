@@ -295,7 +295,7 @@ QStringList VirtualMachine::getArgs(){
         << "-m" << QString::number(Config::getGuestMemSize()) + "M"
         << "-mem-prealloc" << "-no-reboot"
         << "-kernel" << Config::getGuestKernelPath()
-        << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
+        << "-append" << KERNEL_QUIET_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-device" << "virtio-serial-device"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
