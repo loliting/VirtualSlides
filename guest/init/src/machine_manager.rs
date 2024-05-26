@@ -90,11 +90,15 @@ pub fn first_boot_initialization() -> Result<()> {
     };
     
     for mut init_script in init_scripts {
-        init_script.exec()?;
+        _ = init_script.exec().map_err(|err| {
+            eprintln!("vs_init: executing initScript failed: {}", err)
+        });
     }
 
     for mut file in install_files {
-        file.install()?;
+        _ = file.install().map_err(|err| {
+            eprintln!("vs_init: installing installFile failed: {}", err)
+        });
     }
     
     if !hostname.is_empty() {
