@@ -26,7 +26,7 @@ impl InitScript {
             file.set_permissions(Permissions::from_mode(0111))?;
         }
 
-        Command::new(&path).spawn()?.wait()?;
+        Command::new(&path).env("VS_RUN", "1").spawn()?.wait()?;
 
         remove_file(path)?;
 
