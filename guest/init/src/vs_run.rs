@@ -6,9 +6,9 @@ use which::which;
 use path_absolutize::*;
 use regex::Regex;
 
-
 use vs_guest_tools::host_bridge::{CommandSubtask, HostBridge, Request, RequestType};
 use vs_guest_tools::machine_manager::fix_term;
+
 
 fn compare_args(regex_args: &Vec<String>, args: &Vec<String>) -> bool {
     if args.len() - 1 != regex_args.len() {
@@ -35,7 +35,7 @@ fn compare_args(regex_args: &Vec<String>, args: &Vec<String>) -> bool {
     args.is_empty()
 }
 
-fn get_matching_command_subtask(args: Vec<String>) -> Option<CommandSubtask> {
+fn get_matching_command_subtasks(args: Vec<String>) -> Option<Vec<(CommandSubtask, String, String)>> {
     let mut hb = match HostBridge::new() { 
         Ok(hb) => hb,
         Err(_) => {
@@ -69,33 +69,38 @@ fn get_matching_command_subtask(args: Vec<String>) -> Option<CommandSubtask> {
         }
     };
 
+    let mut ans: Vec<(CommandSubtask, String, String)> = Vec::new();
     for task in tasks {
         for subtask in task.subtasks {
             if subtask.command_subtask.is_none() {
                 continue;
             }
-            let subtask = subtask.command_subtask.unwrap();
+            let command_subtask = subtask.command_subtask.unwrap();
 
-            let subtask_cmd = match which(&subtask.command) {
+            let subtask_arg0 = match which(&command_subtask.command) {
                 Ok(p) => p,
                 Err(_) => {
                     continue;
                 }
             };
-            let subtask_cmd = match subtask_cmd.absolutize() {
+            let subtask_arg0 = match subtask_arg0.absolutize() {
                 Ok(p) => p,
                 Err(_) => {
                     continue;
                 }
             };
 
-            if arg0_absolute == subtask_cmd && compare_args(&subtask.args, &args) {
-                return Some(subtask);
+            if arg0_absolute == subtask_arg0 && compare_args(&command_subtask.args, &args) {
+                ans.push((command_subtask, task.id.clone(), subtask.id));
             }
         }
     }
 
-    None
+    if ans.is_empty() {
+        return None
+    }
+
+    Some(ans)
 }
 
 fn main() {
@@ -114,28 +119,40 @@ fn main() {
         _ = fix_term();
     }
 
-    let subtask = get_matching_command_subtask(args[2..].to_vec());
-
-    if subtask.is_some() {
-        let subtask = subtask.unwrap();
-
+    let subtasks = get_matching_command_subtasks(args[2..].to_vec());
+    if subtasks.is_some() {
         let mut child =  match cmd.spawn() {
             Ok(child) => child,
             Err(e) => {
-                eprintln!("{}", e);
+                eprintln!("vs_run: {}", e);
                 exit(1);
             }
         };
         let exit_code = match child.wait() {
             Ok(exit_status) => exit_status.into_raw(),
             Err(e) =>  {
-                eprintln!("{}", e);
+                eprintln!("vs_run: {}", e);
                 exit(1);
             }
         };
 
-        if subtask.exit_code == exit_code {
-            println!("TASK DONE!!!");
+        let mut hb = HostBridge::new().unwrap();
+        for subtask in subtasks.unwrap() {
+            let (subtask, task_id, subtask_id) = subtask;
+            if subtask.exit_code == exit_code {
+                let request = Request {
+                    request_type: RequestType::FinishSubtask,
+                    task_id: Some(task_id),
+                    subtask_id: Some(subtask_id)
+                };
+                match hb.message_host(request) {
+                    Ok(_) => (),
+                    Err(e) =>  {
+                        eprintln!("vs_run: {}", e);
+                        exit(1);
+                    }
+                };
+            }
         }
 
         exit(min(exit_code, 0xFF));
