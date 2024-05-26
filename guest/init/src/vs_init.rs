@@ -2,7 +2,7 @@ use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::{exit, Command};
 use anyhow::Result;
-use vs_init::machine_manager::*;
+use vs_guest_tools::machine_manager::*;
 
 use std::process;
 

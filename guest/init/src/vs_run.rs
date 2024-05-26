@@ -7,8 +7,8 @@ use path_absolutize::*;
 use regex::Regex;
 
 
-use vs_init::host_bridge::{CommandSubtask, HostBridge, RequestType};
-use vs_init::machine_manager::fix_term;
+use vs_guest_tools::host_bridge::{CommandSubtask, HostBridge, Request, RequestType};
+use vs_guest_tools::machine_manager::fix_term;
 
 fn compare_args(regex_args: &Vec<String>, args: &Vec<String>) -> bool {
     if args.len() - 1 != regex_args.len() {
