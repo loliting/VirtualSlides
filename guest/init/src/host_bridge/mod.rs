@@ -5,10 +5,10 @@ mod init_script;
 mod task;
 
 use std::io::{BufRead, BufReader, Write};
-use std::time::Duration;
+// use std::time::Duration;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use indicatif::ProgressBar;
+// use indicatif::ProgressBar;
 use vsock::{get_local_cid, VsockAddr, VsockStream};
 
 pub use install_file::InstallFile;
@@ -80,16 +80,16 @@ impl HostBridge {
     }
     
     fn read(&mut self) -> Result<Response> {
-        let progress_bar = ProgressBar::new_spinner();
+        // let progress_bar = ProgressBar::new_spinner();
         
-        progress_bar.enable_steady_tick(Duration::from_millis(150));
+        // progress_bar.enable_steady_tick(Duration::from_millis(150));
         
         let mut buf: Vec<u8> = Vec::new();
         let mut reader = BufReader::new(&self.stream);
         reader.read_until(b'\x1e', &mut buf)?;
         buf.pop();
 
-        progress_bar.finish_and_clear();
+        // progress_bar.finish_and_clear();
 
         let response: Response = serde_json::from_slice(&buf)?;
         if response.status == Status::Err {
