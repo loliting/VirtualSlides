@@ -9,9 +9,12 @@
 #include <exception>
 
 #include "third-party/nlohmann/json.hpp"
+#include "third-party/RapidXml/rapidxml.hpp"
 
 class VirtualMachine;
 class Network;
+class Presentation;
+class PresentationSlide;
 
 class PresentationException : public std::exception
 {
@@ -38,6 +41,10 @@ class PresentationElement : public QObject
     Q_PROPERTY(qreal height READ height WRITE setHeight NOTIFY sizeChanged);
     Q_PROPERTY(QSizeF size READ size WRITE setSize NOTIFY sizeChanged);
 public:
+    static PresentationElement* create(rapidxml::xml_node<char>* node,
+        PresentationSlide *slide, Presentation* pres
+    );
+
     PresentationElement();
     PresentationElement(qreal x, qreal y, qreal width, qreal height, QWidget *w);
 
@@ -75,8 +82,7 @@ class PresentationSlide : public QLabel
 {
     Q_OBJECT
 public:
-    PresentationSlide(QColor bg = QColor("white"));
-    PresentationSlide(QPixmap bg);
+    PresentationSlide(rapidxml::xml_node<char>* node, Presentation* parent);
     ~PresentationSlide();
 signals:
     void resize(int w, int h);
