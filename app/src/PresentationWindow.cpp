@@ -11,8 +11,14 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
 
     setWindowTitle("Virtual Slides - " + m_presentation->m_title);
 
-    m_nextSlideAction->setShortcut(QKeySequence(Qt::Key_Right));
-    m_previousSlideAction->setShortcut(QKeySequence(Qt::Key_Left));
+    m_nextSlideAction->setShortcuts(QList<QKeySequence>() 
+        << QKeySequence(Qt::Key_Right)
+        << QKeySequence("Ctrl+Shift+Right")
+    );
+    m_previousSlideAction->setShortcuts(QList<QKeySequence>() 
+        << QKeySequence(Qt::Key_Left)
+        << QKeySequence("Ctrl+Shift+Left")
+    );
 
     connect(m_nextSlideAction, SIGNAL(triggered(void)), this, SLOT(nextSlide(void)));
     connect(m_previousSlideAction, SIGNAL(triggered(void)), this, SLOT(previousSlide(void)));
