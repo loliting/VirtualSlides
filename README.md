@@ -1,11 +1,9 @@
 # VirtualSlides
-
 ## WIP - This program is not yet suited to day-to-day usage. Any new commits may contain breaking changes.
 
 ---
 
 ## Building
-
 ### Dependencies
 #### App:
  - Qt6
@@ -46,7 +44,6 @@ IaC configuration of exsting guest images on their first boot.
 Virtual Slides allows presentation maker to add to their presentation custom excercies (called taks), that require to do something in the VM.  
 Tasks should have description informating the user what they should do, as well as subtasks that have to be done by the user.
 Because there often is many different ways to archive something in Linux, tasks can have different paths that require only a subset of the subtasks to be done for the task to be marked as completed.
-
 #### Subtask types:
  - File task - regex match or simple match
  - Command task - kernel-level check if a certain command is executed with specified (or not) arguments and exit code.
@@ -56,3 +53,23 @@ Because there often is many different ways to archive something in Linux, tasks 
  - Install files on guest machines
  - Executing scripts on first boot
  - Setting hostname
+
+
+### TODO list:
+  - Windows support
+  - MacOS support
+  - *BSD guest support (including pfSense and OPNsense)
+  - Port forwading from guests to host
+  - GUI improvements
+  - Integrate building guest image & kernel into CMake
+  - App icon
+  - Add utility installer-like program for new guest types and kernels
+  - More config options
+  - Deploy scripts (installers, linux packages)
+  - QoL improvements
+  - ✨ Slide transition animation ✨
+
+### Known bugs:
+ - Virtual networks currently don't work on MacOS (socket netdev is not working)
+ - ICMP traffic doesn't work on non-Linux hosts
+ - QEMU's vsocks cannot bind on MacOS
