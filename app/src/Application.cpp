@@ -20,27 +20,29 @@ Application* Application::Instance(int &argc, char* argv[]) {
     try{
         Config::Initializate();
     }
-    catch(ConfigException &e){
-        QMessageBox msgBox(QMessageBox::Critical, "Virtual Slides", e.cause(), QMessageBox::Ok);
-        msgBox.exec();
+    catch(ConfigException &e) {
+        QMessageBox::critical(nullptr, 
+            "Fatal Error",
+            e.cause(),
+            QMessageBox::Ok
+        );
 
         delete m_instance;
         m_instance = nullptr;
         return nullptr;
     }
 
-    m_sharedMem = new QSharedMemory("virtual-slides.pid");
+    m_sharedMem = new QSharedMemory("virtual-slides.lock");
     m_sharedMem->attach(QSharedMemory::ReadOnly);
     m_sharedMem->detach();
     if(m_sharedMem->attach(QSharedMemory::ReadOnly) || !m_sharedMem->create(1)) {
         m_sharedMem->detach();
-        QMessageBox msgBox(
-            QMessageBox::Critical,
-            "Virtual Slides",
-            "Failed to acquire lock on virtual-slides.pid\n\nIs another instance running?",
+        QMessageBox::critical(nullptr, 
+            "Fatal Error",
+            "Failed to acquire single instance lock.\n\n"
+            "Is another instance running?",
             QMessageBox::Ok
         );
-        msgBox.exec();
 
         delete m_instance;
         delete m_sharedMem;
@@ -67,7 +69,13 @@ PresentationWindow* Application::addWindow(QString presentationPath){
         presentation = new Presentation(presentationPath);
     }
     catch(PresentationException &e){
-        QMessageBox msgBox(QMessageBox::Critical, "Virtual Slides", e.cause(), QMessageBox::Ok);
+        QMessageBox msgBox(QMessageBox::Critical,
+                           "Fatal Error",
+                           "Failed to load presentation.\
+                           n\n"
+                           + e.cause(),
+                           QMessageBox::Ok
+        );
         msgBox.exec();
         return nullptr;
     }
