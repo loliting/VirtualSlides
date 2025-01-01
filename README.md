@@ -67,7 +67,6 @@ Because there often is many different ways to archive something in Linux, tasks 
   - More config options
   - Deploy scripts (installers, linux packages)
   - QoL improvements
-  - ✨ Slide transition animation ✨
 
 ### Known bugs:
  - Virtual networks currently don't work on MacOS (socket netdev is not working)

@@ -21,8 +21,7 @@ private:
     QAction* m_nextSlideAction = new QAction();
     QAction* m_previousSlideAction = new QAction();
 public slots:
-    void nextSlide();
-    void previousSlide();
+    void setSlide(size_t index);
 protected:
     void resizeEvent(QResizeEvent *event) override;
 };

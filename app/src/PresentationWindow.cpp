@@ -1,6 +1,10 @@
 #include "PresentationWindow.hpp"
 
+#include <QtCore/QPropertyAnimation>
+
 #include <QtGui/QResizeEvent>
+
+#include <QtWidgets/QGraphicsOpacityEffect>
 
 PresentationWindow::PresentationWindow(Presentation* presentation)
     : QMainWindow(), m_presentation(presentation)
@@ -20,8 +24,12 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
         << QKeySequence("Ctrl+Shift+Left")
     );
 
-    connect(m_nextSlideAction, SIGNAL(triggered(void)), this, SLOT(nextSlide(void)));
-    connect(m_previousSlideAction, SIGNAL(triggered(void)), this, SLOT(previousSlide(void)));
+    connect(m_nextSlideAction, &QAction::triggered, this, [this] {
+        setSlide(m_currentSlideIndex + 1);
+    });
+    connect(m_previousSlideAction, &QAction::triggered, this, [this] {
+        setSlide(m_currentSlideIndex - 1);
+    });
 
     addAction(m_nextSlideAction);
     addAction(m_previousSlideAction);
@@ -39,27 +47,36 @@ void PresentationWindow::resizeEvent(QResizeEvent *e) {
     QMainWindow::resizeEvent(e);
 }
 
-void PresentationWindow::nextSlide() {
-    if(m_currentSlideIndex == m_presentation->m_slides.count() - 1)
+void PresentationWindow::setSlide(size_t index) {
+    if(m_presentation->m_slides.size() <= index)
         return;
-    m_presentation->m_slides[m_currentSlideIndex + 1]->setParent(this);
-    m_presentation->m_slides[m_currentSlideIndex + 1]->setFixedSize(size());
-    m_presentation->m_slides[m_currentSlideIndex + 1]->show();
-    m_presentation->m_slides[m_currentSlideIndex]->hide();
+    size_t newIndex = index;
+    size_t oldIndex = m_currentSlideIndex;
 
-    ++m_currentSlideIndex;
-}
+    // slide set-up
+    m_presentation->m_slides[newIndex]->setParent(this);
+    m_presentation->m_slides[newIndex]->setFixedSize(size());
+    m_presentation->m_slides[newIndex]->show();
+    m_presentation->m_slides[newIndex]->raise();
 
-void PresentationWindow::previousSlide() {
-    if(m_currentSlideIndex == 0)
-        return;
 
-    m_presentation->m_slides[m_currentSlideIndex - 1]->setParent(this);
-    m_presentation->m_slides[m_currentSlideIndex - 1]->setFixedSize(size());
-    m_presentation->m_slides[m_currentSlideIndex - 1]->show();
-    m_presentation->m_slides[m_currentSlideIndex]->hide();
+    QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect();
+    effect->setOpacity(1.0f);
+    m_presentation->m_slides[newIndex]->setGraphicsEffect(effect);
 
-    --m_currentSlideIndex;
+    QPropertyAnimation *a = new QPropertyAnimation(effect, "opacity");
+    a->setDuration(200);
+    a->setStartValue(0.0f);
+    a->setEndValue(1.0f);
+    a->setEasingCurve(QEasingCurve::Type::InBack);
+
+    connect(a, &QPropertyAnimation::finished, this, [this, oldIndex]() {
+        m_presentation->m_slides[oldIndex]->hide();
+    });
+    a->start(QPropertyAnimation::DeleteWhenStopped);
+
+
+    m_currentSlideIndex = newIndex;
 }
 
 void PresentationWindow::showFullScreen() {
