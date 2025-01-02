@@ -63,7 +63,7 @@ void Application::CleanUp() {
     m_sharedMem = nullptr;
 }
 
-PresentationWindow* Application::addWindow(QString presentationPath){
+PresentationWindow* Application::addWindow(QString presentationPath) {
     Presentation* presentation;
     try {
         presentation = new Presentation(presentationPath);
@@ -71,8 +71,8 @@ PresentationWindow* Application::addWindow(QString presentationPath){
     catch(PresentationException &e){
         QMessageBox msgBox(QMessageBox::Critical,
                            "Fatal Error",
-                           "Failed to load presentation.\
-                           n\n"
+                           "Failed to load presentation."
+                           "\n\n"
                            + e.cause(),
                            QMessageBox::Ok
         );
