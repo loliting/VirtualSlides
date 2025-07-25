@@ -43,14 +43,6 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
         return false;
     }
 
-    const int reusePortEnabled = 1;
-    if(setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &reusePortEnabled, sizeof(int)) < 0){
-        m_err = errno;
-        m_errStr = strerror(m_err);
-        emit errorOccurred(m_err);
-        return false;
-    }
-
     if(!VSock::setBlocking(m_sockfd, false)){
         m_err = errno;
         m_errStr = strerror(m_err);
