@@ -31,21 +31,25 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
 
     if((m_sockfd = socket(AF_VSOCK, SOCK_STREAM, 0)) == -1) {
         m_err = errno;
-        m_errStr = strerror(m_err);
+        m_errStr = "socket(): ";
+        m_errStr += strerror(m_err);
+        emit errorOccurred(m_err);
         return false;
     }
 
     const int reuseAddrEnabled = 1;
     if(setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuseAddrEnabled, sizeof(int)) < 0){
         m_err = errno;
-        m_errStr = strerror(m_err);
+        m_errStr = "setsockopt(): ";
+        m_errStr += strerror(m_err);
         emit errorOccurred(m_err);
         return false;
     }
 
     if(!VSock::setBlocking(m_sockfd, false)){
         m_err = errno;
-        m_errStr = strerror(m_err);
+        m_errStr = "VSock::setBlocking(): ";
+        m_errStr += strerror(m_err);
         emit errorOccurred(m_err);
         return false;
     }
@@ -62,7 +66,9 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
         delete addr;
         addr = nullptr;
         m_err = errno;
-        m_errStr = strerror(m_err);
+        m_errStr = "bind(): ";
+        m_errStr += strerror(m_err);
+        emit errorOccurred(m_err);
         return false;
     }
 
@@ -70,7 +76,9 @@ bool VSockServer::listen(uint32_t cid, uint32_t port) {
         delete addr;
         addr = nullptr;
         m_err = errno;
-        m_errStr = strerror(m_err);
+        m_errStr = "listen(): ";
+        m_errStr += strerror(m_err);
+        emit errorOccurred(m_err);
         return false;
     }
 
@@ -128,7 +136,8 @@ bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
             if(timedOut)
                 *timedOut = false;
             m_err = errno;
-            m_errStr = strerror(m_err);
+            m_errStr = "accept(): ";
+            m_errStr += strerror(m_err);
             ::close(fd);
             emit errorOccurred(m_err);
             return false;
@@ -136,8 +145,8 @@ bool VSockServer::waitForNewConnection(int msec, bool *timedOut) {
 
         VSock *sock = new VSock(this);
         if(!sock->setFd(fd)){
-            m_err = errno;
-            m_errStr = strerror(m_err);
+            m_err = sock->error();
+            m_errStr = "VSock::setFd(): " + sock->errorString();
             ::close(fd);
             emit errorOccurred(m_err);
             sock->deleteLater();
