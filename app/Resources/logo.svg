@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="256px"
+   version="1.1"
+   width="256px"
+   id="svg5"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="g6"
+     transform="matrix(1.0714286,0,0,1.2142984,-6.2238126,-33.774912)">
+    <rect
+       fill="#2e2e2e"
+       height="120"
+       rx="6"
+       ry="6"
+       stroke="#000000"
+       stroke-width="4"
+       width="200"
+       x="25.275558"
+       y="64.519966"
+       id="rect1" />
+    <rect
+       fill="#2e2e2e"
+       height="10"
+       rx="4"
+       ry="4"
+       stroke="#000000"
+       stroke-width="4"
+       width="220"
+       x="15.275558"
+       y="54.51997"
+       id="rect2" />
+    <line
+       stroke="#000000"
+       stroke-width="6"
+       x1="125.27556"
+       x2="105.27556"
+       y1="184.51996"
+       y2="224.51996"
+       id="line2" />
+    <line
+       stroke="#000000"
+       stroke-width="6"
+       x1="125.27556"
+       x2="145.27557"
+       y1="184.51996"
+       y2="224.51996"
+       id="line3" />
+    <line
+       stroke="#000000"
+       stroke-width="6"
+       x1="125.27556"
+       x2="125.27556"
+       y1="184.51996"
+       y2="224.51996"
+       id="line4" />
+    <g
+       id="g7"
+       transform="matrix(1.2513133,0,0,1.1040889,-34.875747,-58.403549)">
+      <rect
+         fill="none"
+         height="40"
+         rx="6"
+         ry="6"
+         stroke="#ffffff"
+         stroke-width="6"
+         transform="rotate(15)"
+         width="40"
+         x="152.28819"
+         y="91.165665"
+         id="rect4" />
+      <rect
+         fill="none"
+         height="40"
+         rx="6"
+         ry="6"
+         stroke="#ffffff"
+         stroke-width="6"
+         transform="rotate(-15)"
+         width="40"
+         x="49.962879"
+         y="176.07664"
+         id="rect5" />
+    </g>
+  </g>
+</svg>

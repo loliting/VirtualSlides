@@ -17,6 +17,8 @@ Application* Application::Instance() {
 Application* Application::Instance(int &argc, char* argv[]) {
     assert(m_instance == nullptr);
     m_instance = new Application(argc, argv);
+    m_instance->setWindowIcon(QIcon(QPixmap("://icons/logo.svg")));
+
     try{
         Config::Initializate();
     }
