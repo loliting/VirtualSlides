@@ -63,7 +63,7 @@ VirtualMachineWidget::VirtualMachineWidget(VirtualMachine* vm, QWidget* parent)
     m_restartButton->setEnabled(false);
 
     if(m_vm->m_tasks.count() > 0) {
-        m_tasksButton = new QPushButton(QIcon(":/icons/task-list.png"), "", this);
+        m_tasksButton = new QPushButton(QIcon("://icons/task-list.svg"), "", this);
 
         connect(m_tasksButton, &QPushButton::clicked,
             this, &VirtualMachineWidget::displayTaskList);

@@ -3,5 +3,6 @@
         <file>start.png</file>
         <file>stop.png</file>
         <file>restart.png</file>
+        <file>task-list.svg</file>
     </qresource>
 </RCC>
