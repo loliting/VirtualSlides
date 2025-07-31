@@ -11,9 +11,9 @@ on_error () {
 
 pushd $(dirname $(readlink -f $0)) >> /dev/null
 
-# Linux 6.8.9 is the lastest stable release as of 16.05.2024, the minimum
+# Linux 6.12.40 is the lastest LTS release as of 31.07.2025, the minimum
 # required version is 6.8 (because of the `fs/exec.c` patch compatibility)
-LINUX_VER="${VS_LINUX_VER:-"6.12.5"}"
+LINUX_VER="${VS_LINUX_VER:-"6.12.40"}"
 KERNEL_URL=https://cdn.kernel.org/pub/linux/kernel/v$(echo $LINUX_VER | head -c 1).x/linux-$LINUX_VER.tar.xz
 
 
