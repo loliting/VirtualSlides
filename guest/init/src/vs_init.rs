@@ -11,8 +11,9 @@ const ENV: [(&str, &str); 2] = [
     ("TERM", "xterm-256color")
 ];
 
+
 fn main() -> Result<()> {
-    let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
     
     if args[0].contains("poweroff") || args[0].contains("shutdown") {
         poweroff()?;
@@ -33,8 +34,8 @@ fn main() -> Result<()> {
         exit(1);
     }
     if args.len() < 2 {
-        eprintln!("usage: {} [target init system]", args[0]);
-        exit(1);
+        eprintln!("vs_init: target init system not specified, using /bin/sh");
+        args.push("/bin/sh".to_string());
     }
 
     system_init()?;
