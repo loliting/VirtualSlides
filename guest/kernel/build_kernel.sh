@@ -35,9 +35,6 @@ cp defconfig linux-$LINUX_VER/.config
 
 pushd linux-$LINUX_VER >> /dev/null
 
-sed -i 's/#define N_TTY_BUF_SIZE.*/#define N_TTY_BUF_SIZE 1024 * 1024 \/\/ 1MiB/g' ./include/linux/tty.h
-on_error "Failed to change kernel's tty buffor size define in source code"
-
 make olddefconfig
 on_error 'Kernel config build failed'
 
