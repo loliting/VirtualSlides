@@ -349,12 +349,10 @@ void VirtualMachine::start() {
     m_consoleServer->listen(m_serverName);
     
     if(m_consoleServer->isListening() == false) {
-        QMessageBox(QMessageBox::Critical,
-            "Virtual Slides: VM error",
-            "Failed to start VM: " + m_consoleServer->errorString(),
-            QMessageBox::Ok,
-            nullptr
-        ).exec();
+        QMessageBox::critical(qApp->activeWindow(),
+            "Fatal error",
+            "Failed to start VM: " + m_consoleServer->errorString()
+        );
         return;
     }
 
@@ -367,7 +365,11 @@ void VirtualMachine::start() {
     m_vmProcess->setArguments(getArgs());
     m_vmProcess->start();
 
-    connect(m_vmProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(handleVmProcessFinished(int)));
+    connect(m_vmProcess, &QProcess::finished, this, &VirtualMachine::handleVmProcessFinished);
+    connect(m_vmProcess, &QProcess::started, this, [this]{
+        if(m_guestBridge && !m_guestBridge->isListening())
+            m_guestBridge->start();
+    });
 
     m_isRunning = true;
 }
@@ -392,14 +394,6 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
     }
     m_consoleServer = nullptr;
 
-    if(exitCode != 0){
-        QMessageBox(QMessageBox::Critical,
-            "Virtual Slides: VM error",
-            "QEMU failed: " + m_vmProcess->readAllStandardError(),
-            QMessageBox::Ok,
-            nullptr
-        ).exec();
-    }
 
     m_isRunning = false;
 
@@ -414,11 +408,24 @@ void VirtualMachine::handleVmProcessFinished(int exitCode) {
 
     /*
      * If the guest bridge is not listing and qemu process finished, 
-     * it probably means that our init system crashed.
+     * it probably that something crashed
      */
-    if(m_guestBridge && !m_guestBridge->isListening()){
-        m_guestBridge->start();
-        start();
+    if(m_retryCounter < 3) {
+        if(m_guestBridge && !m_guestBridge->isListening()) {
+            m_guestBridge->start();
+            start();
+            m_retryCounter += 1;
+        }
+        else
+            m_retryCounter = 0;
+    }
+    else if(exitCode != 0){
+        QMessageBox(QMessageBox::Critical,
+            "Virtual Slides: VM error",
+            "QEMU failed: " + m_vmProcess->readAllStandardError(),
+            QMessageBox::Ok,
+            qApp->activeWindow()
+        ).exec();
     }
 }
 

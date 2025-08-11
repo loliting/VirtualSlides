@@ -140,7 +140,8 @@ private:
 
     QStringList getArgs();
     bool m_isRunning = false;
-    bool m_shouldRestart = false; /* Should vm restart instead of stopping on stop() */
+    bool m_shouldRestart = false; /* Should vm restart when stopped */
+    uint m_retryCounter = 0;
     QProcess* m_vmProcess;
 
     QString m_serverName;
