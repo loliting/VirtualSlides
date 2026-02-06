@@ -65,6 +65,14 @@ bool UnixSocketServer::listen(QString path) {
         return false;
     }
 
+    if(!UnixSocket::setBlocking(m_sockfd, false)) {
+        close();
+        m_errStr = "UnixSocket::setBlocking(): ";
+        m_errStr += strerror(m_err = errno);
+        emit errorOccurred(m_err);
+        return false;
+    }
+
     m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
     connect(m_readNotifier, &QSocketNotifier::activated,
         this, [=]{ waitForNewConnection(0); });

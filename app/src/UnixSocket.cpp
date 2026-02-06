@@ -23,7 +23,7 @@ int UnixSocket::makeSocket(const QString& path, struct sockaddr** addrp) {
         return -1;
     }
 
-    if(!setBlocking(sockfd, false)) {
+    if(!setBlocking(sockfd, true)) {
         ::close(sockfd);
         return -1;
     }
@@ -261,7 +261,7 @@ bool UnixSocket::setBlocking(int fd, bool block) {
     flags &= ~O_NONBLOCK;
     flags |= !block * O_NONBLOCK;
 
-    return fcntl(fd, F_SETFL, flags) != -1;
+    return fcntl(fd, F_SETFL, flags) >= 0;
 }
 
 bool UnixSocket::setBlocking(bool block) {
