@@ -171,19 +171,17 @@ PresentationElement* PresentationElement::create(xml_node<char>* node,
 PresentationSlide::PresentationSlide(xml_node<char>* node, Presentation* pres) {
     setAutoFillBackground(true);
     setScaledContents(true);
-    
+    setFocusPolicy(Qt::FocusPolicy::ClickFocus);
+
     xml_attribute<char>* bgAttribute = node->first_attribute("bg", 0UL, false);
+    setPalette(QPalette(QColor("white")));
     if(bgAttribute) {
         if(pres->isFileValid(bgAttribute->value()))
             setPixmap(QPixmap(pres->getFilePath(bgAttribute->value())));
         else if(QColor::isValidColorName(bgAttribute->value()))
             setPalette(QPalette(QColor(bgAttribute->value())));
-        else
-            setPalette(QPalette(QColor("white")));
     }
-    else
-        setPalette(QPalette(QColor("white")));
-    
+     
     xml_node<char>* elementNode = node->first_node(nullptr, 0UL, false);
     while(elementNode) {
         PresentationElement* presentationElement = PresentationElement::create(elementNode, this, pres);
