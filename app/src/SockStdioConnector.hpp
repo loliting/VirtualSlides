@@ -1,5 +1,6 @@
 #include <QtCore/QCoreApplication>
-#include <QtNetwork/QLocalSocket>
+
+#include "UnixSocket.hpp"
 
 class SockStdioConnectorApp : public QCoreApplication {
     Q_OBJECT
@@ -15,7 +16,7 @@ signals:
 private slots:
     void writeToSockImpl(char c);
     void readSock();
-    void printSocketError(QLocalSocket::LocalSocketError);
+    void printSocketError(int error);
 private:
     SockStdioConnectorApp(int &argc, char *argv[]) : QCoreApplication(argc, argv) { }
     ~SockStdioConnectorApp() override { }
@@ -25,7 +26,5 @@ private:
     static SockStdioConnectorApp* m_instance;
 
     QString m_socketName;
-    QLocalSocket* m_socket = new QLocalSocket();
-    uint8_t expectedCharSize = 0;
-    QByteArray charBuffor;
+    UnixSocket* m_socket = new UnixSocket(this);
 };

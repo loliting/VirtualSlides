@@ -325,10 +325,10 @@ void VirtualMachine::setNet(Network* net){
 }
 
 void VirtualMachine::handleNewConsoleSocketConnection() {
-    QLocalSocket* conn = m_consoleServer->nextPendingConnection();
+    UnixSocket* conn = m_consoleServer->nextPendingConnection();
     if(m_consoleSocket){
         m_terminalSockets.append(conn);
-        connect(conn, &QLocalSocket::readyRead, this, [this, conn]{ handleClientConsoleSockReadReady(conn); });
+        connect(conn, &UnixSocket::readyRead, this, [this, conn]{ handleClientConsoleSockReadReady(conn); });
     }
     else{
         m_consoleSocket = conn;
@@ -344,18 +344,18 @@ void VirtualMachine::start() {
     if(m_guestBridge && !m_guestBridge->isListening())
         m_guestBridge->start();
     
-    m_consoleServer = new QLocalServer();
-    m_serverName = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    m_consoleServer->listen(m_serverName);
-    
-    if(m_consoleServer->isListening() == false) {
+    m_consoleServer = new UnixSocketServer();
+    QString serverNameUuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    if(!m_consoleServer->listen(serverNameUuid)) {
         QMessageBox::critical(qApp->activeWindow(),
             "Fatal error",
             "Failed to start VM: " + m_consoleServer->errorString()
+            + "(" + m_consoleServer->fullServerName() + ")"
         );
         return;
     }
-
+    m_serverName = m_consoleServer->fullServerName();
+    
     connect(m_consoleServer, SIGNAL(newConnection()),
         this, SLOT(handleNewConsoleSocketConnection(void)));
 
@@ -443,7 +443,7 @@ void VirtualMachine::restart() {
     stop();
 }
 
-void VirtualMachine::handleClientConsoleSockReadReady(QLocalSocket* sock) {
+void VirtualMachine::handleClientConsoleSockReadReady(UnixSocket* sock) {
     m_consoleSocket->write(sock->readAll());
 }
 
@@ -452,12 +452,12 @@ void VirtualMachine::handleConsoleSockReadReady() {
 
     for (auto term : m_terminalSockets) {
         term->write(data);
-        term->flush();
     }
 }
 
 VirtualMachine::~VirtualMachine() {
     stop();
+    m_imageFile.close();
     if(m_guestBridge){
         m_guestBridge->stop();
         m_guestBridge->deleteLater();

@@ -9,12 +9,15 @@ enable_testing(true)
 
 add_executable(tst_vsock
     tst_vsock.cpp
-    ../src/VSockServer.hpp
-    ../src/VSockServer.cpp
-    ../src/VSock.hpp
-    ../src/VSock.cpp
 )
 
-target_link_libraries(tst_vsock PRIVATE Qt6::Test Qt6::Core)
+add_executable(tst_unixsock
+    tst_unixsock.cpp
+)
+
+target_link_libraries(tst_vsock PRIVATE Qt6::Test Qt6::Core vs-common-sockets)
+target_link_libraries(tst_unixsock PRIVATE Qt6::Test Qt6::Core vs-common-sockets)
 
 add_test(NAME tst_vsock COMMAND tst_vsock)
+
+add_test(NAME tst_unixsock COMMAND tst_unixsock)

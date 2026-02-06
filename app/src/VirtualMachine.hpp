@@ -6,14 +6,13 @@
 #include <QtCore/QList>
 #include <QtCore/QTemporaryFile>
 #include <QtCore/QProcess>
-#include <QtNetwork/QLocalSocket>
-#include <QtNetwork/QLocalServer>
 #include <QtCore/QUuid>
 
 #include <exception>
 
+#include "UnixSocket.hpp"
+#include "UnixSocketServer.hpp"
 #include "third-party/nlohmann/json.hpp"
-
 
 #include "Config.hpp"
 
@@ -145,9 +144,9 @@ private:
     QProcess* m_vmProcess;
 
     QString m_serverName;
-    QLocalServer* m_consoleServer = nullptr;
-    QLocalSocket* m_consoleSocket = nullptr;
-    QList<QLocalSocket*> m_terminalSockets;
+    UnixSocketServer* m_consoleServer = nullptr;
+    UnixSocket* m_consoleSocket = nullptr;
+    QList<UnixSocket*> m_terminalSockets;
 
     GuestBridge* m_guestBridge = nullptr;
     uint32_t m_cid;
@@ -164,7 +163,7 @@ signals:
 private slots:
     void handleNewConsoleSocketConnection();
     void handleConsoleSockReadReady();
-    void handleClientConsoleSockReadReady(QLocalSocket* sock);
+    void handleClientConsoleSockReadReady(UnixSocket* sock);
     
     void handleVmProcessFinished(int);
 public slots:

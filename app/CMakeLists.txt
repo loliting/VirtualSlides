@@ -11,6 +11,17 @@ find_package(libzip REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 
+add_library(vs-common-sockets SHARED
+    src/UnixSocket.cpp
+    src/UnixSocket.hpp
+    src/UnixSocketServer.cpp
+    src/UnixSocketServer.hpp
+    src/VSock.cpp
+    src/VSock.hpp
+    src/VSockServer.cpp
+    src/VSockServer.hpp
+)
+
 set(VS_SOURCES
     src/main.cpp
     src/Application.cpp
@@ -31,33 +42,33 @@ set(VS_SOURCES
     src/VirtualMachineWidget.hpp
     src/VmTaskList.cpp
     src/VmTaskList.hpp
-    src/VSock.cpp
-    src/VSock.hpp
-    src/VSockServer.cpp
-    src/VSockServer.hpp
 )
 
 qt6_add_resources(VS_SOURCES Resources/res.qrc)
 
 add_executable(virtual-slides ${VS_SOURCES} Resources/res.qrc)
 
-target_link_libraries(virtual-slides PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Network
-    qtermwidget6
-    libzip::zip
-)
-
 target_compile_definitions(virtual-slides PRIVATE $<$<CONFIG:Debug>:DEBUG_BUILD=1>)
 
 
 add_executable(vs-sock-stdio-connector src/SockStdioConnector.cpp src/SockStdioConnector.hpp)
 
+target_link_libraries(virtual-slides PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    qtermwidget6
+    libzip::zip
+    vs-common-sockets
+)
+
 target_link_libraries(vs-sock-stdio-connector PRIVATE
     Qt6::Core
-    Qt6::Network
+    vs-common-sockets
+)
+
+target_link_libraries(vs-common-sockets PRIVATE
+    Qt6::Core
 )
 
 add_subdirectory(tests)
