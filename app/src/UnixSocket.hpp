@@ -45,7 +45,6 @@ private:
     bool handleWriteAvaliable();
     void handleSocketException();
 private:
-    bool m_connected = false;
     int m_sockfd = -1;
     struct sockaddr* m_addr = nullptr;
 

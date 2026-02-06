@@ -39,7 +39,7 @@ int UnixSocket::makeSocket(const QString& path, struct sockaddr** addrp) {
 }
 
 bool UnixSocket::connectToServer(const QString& path) {
-    if(m_connected) {
+    if(isOpen()) {
         m_err = EPERM;
         setErrorString("Socket already connected");
         return false;
@@ -71,25 +71,20 @@ bool UnixSocket::connectToServer(const QString& path) {
     connect(m_writeNotifier, &QSocketNotifier::activated,
         this, &UnixSocket::handleWriteAvaliable);
 
-    m_connected = QIODevice::open(ReadWrite);
-    if(!m_connected)
-        close();
-    else
-        emit connected();
+    emit connected();
 
-    return m_connected;
+    return QIODevice::open(ReadWrite);
 }
 
 UnixSocket::~UnixSocket() {
-    if(m_connected)
+    if(isOpen())
         close();
 }
 
 void UnixSocket::close() {
-    if(!m_connected)
+    if(!isOpen())
         return;
         
-    m_connected = false;
     ::close(m_sockfd);
     m_sockfd = -1;
 
@@ -120,7 +115,6 @@ void UnixSocket::close() {
 
 bool UnixSocket::setFd(int fd) {
     m_sockfd = fd;
-    m_connected = true;
 
     if(!setBlocking(false))
         return false;
@@ -137,12 +131,11 @@ bool UnixSocket::setFd(int fd) {
     connect(m_exceptionNotifier, &QSocketNotifier::activated,
         this, &UnixSocket::handleSocketException);
 
-    m_connected = QIODevice::open(QIODevice::ReadWrite);
-    return m_connected;
+    return QIODevice::open(QIODevice::ReadWrite);
 }
 
 qint64 UnixSocket::readData(char *data, qint64 maxSize) {
-    if(!m_connected)
+    if(!isOpen())
         return -1;
     qint64 rc = ::read(m_sockfd, data, maxSize);
     if(rc < 0) {
@@ -159,7 +152,7 @@ qint64 UnixSocket::readData(char *data, qint64 maxSize) {
 }
 
 qint64 UnixSocket::writeData(const char *data, qint64 maxSize) {
-    if(!m_connected)
+    if(!isOpen())
         return -1;
     
     m_writeBuffor += QByteArray(data, maxSize);
@@ -221,7 +214,7 @@ bool UnixSocket::waitForReadyRead(int msecs) {
 
     do {
         bytesRead = bytesAvailable();
-    } while(bytesRead == 0 && deadline.remainingTime());
+    } while(isOpen() & bytesRead == 0 && deadline.remainingTime());
 
     return bytesRead > 0;
 }
@@ -235,7 +228,7 @@ bool UnixSocket::waitForBytesWritten(int msecs) {
     do{
         if(!handleWriteAvaliable())
             return false;
-    } while(m_writeBuffor.size() > 0 && deadline.remainingTime());
+    } while(isOpen() && m_writeBuffor.size() > 0 && deadline.remainingTime());
 
     return true;
 }
@@ -274,7 +267,7 @@ bool UnixSocket::setBlocking(bool block) {
 }
 
 void UnixSocket::handleSocketException() {
-    if(!m_connected)
+    if(!isOpen())
         return;
     
     int err = 0;
