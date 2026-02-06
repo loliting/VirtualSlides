@@ -23,6 +23,8 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
         << QKeySequence(Qt::Key_Left)
         << QKeySequence("Ctrl+Shift+Left")
     );
+    m_toggleFullScreenAction->setShortcut(QKeySequence("Shift+F11"));
+    m_toggleFullScreenAction->setShortcutContext(Qt::ShortcutContext::ApplicationShortcut);
 
     connect(m_nextSlideAction, &QAction::triggered, this, [this] {
         setSlide(m_currentSlideIndex + 1);
@@ -30,15 +32,31 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
     connect(m_previousSlideAction, &QAction::triggered, this, [this] {
         setSlide(m_currentSlideIndex - 1);
     });
+    connect(m_toggleFullScreenAction, &QAction::triggered, this, &PresentationWindow::toggleFullScreen);
 
     addAction(m_nextSlideAction);
     addAction(m_previousSlideAction);
+    addAction(m_toggleFullScreenAction);
 }
 
-PresentationWindow::~PresentationWindow(){
-    delete m_presentation;
-    delete m_nextSlideAction;
-    delete m_previousSlideAction;
+PresentationWindow::~PresentationWindow() {
+    if(m_nextSlideAction) {
+        m_nextSlideAction->deleteLater();
+        m_nextSlideAction = nullptr;
+    }
+    if(m_previousSlideAction) {
+        m_previousSlideAction->deleteLater();
+        m_previousSlideAction = nullptr;
+    }
+    if(m_toggleFullScreenAction) {
+        m_toggleFullScreenAction->deleteLater();
+        m_toggleFullScreenAction = nullptr;
+    }
+
+    if(m_presentation) {
+        delete m_presentation;
+        m_presentation = nullptr;
+    }
 }
 
 void PresentationWindow::resizeEvent(QResizeEvent *e) {
@@ -75,7 +93,6 @@ void PresentationWindow::setSlide(size_t index) {
     });
     a->start(QPropertyAnimation::DeleteWhenStopped);
 
-
     m_currentSlideIndex = newIndex;
 }
 
@@ -83,6 +100,14 @@ void PresentationWindow::showFullScreen() {
     QScreen *screen = QGuiApplication::primaryScreen();
     move(screen->geometry().x(), screen->geometry().y());
     resize(screen->geometry().width(), screen->geometry().height());
-    
     QMainWindow::showFullScreen();
+}
+
+void PresentationWindow::toggleFullScreen() {
+    if(isFullScreen()) {
+        showMaximized();
+    }
+    else {
+        showFullScreen();
+    }
 }

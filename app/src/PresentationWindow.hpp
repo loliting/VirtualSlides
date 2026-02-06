@@ -14,12 +14,14 @@ public:
     ~PresentationWindow();
 
     void showFullScreen();
+    void toggleFullScreen();
 private:
     Presentation* m_presentation = nullptr;
 
     quint64 m_currentSlideIndex = 0;
-    QAction* m_nextSlideAction = new QAction();
-    QAction* m_previousSlideAction = new QAction();
+    QAction* m_nextSlideAction = new QAction(this);
+    QAction* m_previousSlideAction = new QAction(this);
+    QAction* m_toggleFullScreenAction = new QAction(this);
 public slots:
     void setSlide(size_t index);
 protected:
