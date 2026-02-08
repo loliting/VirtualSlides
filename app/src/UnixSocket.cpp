@@ -31,10 +31,11 @@ int UnixSocket::makeSocket(const QString& path, struct sockaddr** addrp) {
     struct sockaddr_un *addr = new struct sockaddr_un;
     addr->sun_family = AF_UNIX;
     addr->sun_path[0] = '\0';
-    memcpy(addr->sun_path, path.toUtf8().constData(), path.length());
-    addr->sun_path[path.length()] = '\0';
+    QByteArray utf8Path = path.toUtf8();
+    memcpy(addr->sun_path, utf8Path.constData(), utf8Path.size());
+    addr->sun_path[utf8Path.size()] = '\0';
     *addrp = (struct sockaddr*)addr;
-
+    
     return sockfd;
 }
 
