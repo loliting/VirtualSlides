@@ -65,9 +65,8 @@ void tst_UnixSocket::testEchoServer() {
     QSignalSpy spyError(&socket, &UnixSocket::errorOccurred);
     QSignalSpy spyReadyRead(&socket, &UnixSocket::readyRead);
 
-    socket.connectToServer(SERVER_PATH);
+    QVERIFY2(socket.connectToServer(server.fullServerName()), qUtf8Printable(socket.errorString()));
     bool timedOut = true;
-    int expectedReadyReadSignals = 0;
 
     server.waitForNewConnection(3000, &timedOut);
 
@@ -76,27 +75,31 @@ void tst_UnixSocket::testEchoServer() {
     QVERIFY(socket.isOpen());
 
     if (server.hasPendingConnections()) {
-        QString testLine = "test";
+        QString testLine = "\'test";
         for (int i = 0; i < 50000; ++i)
-            testLine += QLatin1Char('a');
+            testLine += QLatin1Char('a' + i % 3);
+        testLine += QLatin1Char('\'');
         UnixSocket *serverSocket = server.nextPendingConnection();
         QVERIFY(serverSocket);
         QVERIFY(serverSocket->isOpen());
         QTextStream out(serverSocket);
         QTextStream in(&socket);
         out << testLine << Qt::endl;
+        out << testLine;
         bool wrote = serverSocket->waitForBytesWritten(3000);
 
         if (!socket.canReadLine()) {
-            expectedReadyReadSignals = 1;
-            QVERIFY(socket.waitForReadyRead(-1));
+            QVERIFY(socket.waitForReadyRead(3000));
         }
 
         QVERIFY(socket.bytesAvailable() >= 0);
         QCOMPARE(socket.bytesToWrite(), (qint64)0);
-        QCOMPARE(spyReadyRead.size(), expectedReadyReadSignals);
+        
+        QVERIFY(spyReadyRead.size() >= 1 || spyReadyRead.wait(1000));
+        QVERIFY(spyReadyRead.size() >= 1);
 
-        QVERIFY(testLine.startsWith(in.readLine()));
+        QVERIFY(testLine == in.readLine());
+        QCOMPARE(testLine, in.readAll());
 
         QVERIFY2(wrote || serverSocket->waitForBytesWritten(1000), qUtf8Printable(serverSocket->errorString()));
 
