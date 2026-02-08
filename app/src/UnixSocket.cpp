@@ -4,7 +4,6 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/ioctl.h>
 
 int UnixSocket::makeSocket(const QString& path, struct sockaddr** addrp) {
     int sockfd = -1;
@@ -59,22 +58,7 @@ bool UnixSocket::connectToServer(const QString& path) {
         return false;
     }
 
-    if(!setBlocking(false)) {
-        close();
-        return false;
-    }
-
-    m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
-    connect(m_readNotifier, &QSocketNotifier::activated,
-        this, &UnixSocket::readyRead);
-    
-    m_writeNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Write, this);
-    connect(m_writeNotifier, &QSocketNotifier::activated,
-        this, &UnixSocket::handleWriteAvaliable);
-
-    emit connected();
-
-    return QIODevice::open(ReadWrite);
+    return setFd(m_sockfd);
 }
 
 UnixSocket::~UnixSocket() {
@@ -89,23 +73,13 @@ void UnixSocket::close() {
     ::close(m_sockfd);
     m_sockfd = -1;
 
-    if(m_readNotifier) {
-        m_readNotifier->setEnabled(false);
-        m_readNotifier->deleteLater();
-        m_readNotifier = nullptr;
-    }
-    if(m_writeNotifier) {
-        m_writeNotifier->setEnabled(false);
-        m_writeNotifier->deleteLater();
-        m_writeNotifier = nullptr;
-    }
-    if(m_exceptionNotifier) {
-        m_exceptionNotifier->setEnabled(false);
-        m_exceptionNotifier->deleteLater();
-        m_exceptionNotifier = nullptr;
-    }
+    m_readNotifier.setEnabled(false);
+    m_readNotifier.setSocket(-1);
+    m_writeNotifier.setEnabled(false);
+    m_writeNotifier.setSocket(-1);
+
     if(m_addr) {
-        delete m_addr;
+        delete (struct sockaddr_un*)m_addr;
         m_addr = nullptr;
     }
     
@@ -117,20 +91,22 @@ void UnixSocket::close() {
 bool UnixSocket::setFd(int fd) {
     m_sockfd = fd;
 
-    if(!setBlocking(false))
+    if(!setBlocking(false)) {
+        close();
         return false;
+    }
 
-    m_readNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Read, this);
-    connect(m_readNotifier, &QSocketNotifier::activated,
-        this, &UnixSocket::readyRead);
+    m_readNotifier.setSocket(m_sockfd);
+    connect(&m_readNotifier, &QSocketNotifier::activated,
+        this, &UnixSocket::handleReadAvaliable);
+    m_readNotifier.setEnabled(true);
     
-    m_writeNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Write, this);
-    connect(m_writeNotifier, &QSocketNotifier::activated,
+    m_writeNotifier.setSocket(m_sockfd);
+    connect(&m_writeNotifier, &QSocketNotifier::activated,
         this, &UnixSocket::handleWriteAvaliable);
+    m_writeNotifier.setEnabled(false);
 
-    m_exceptionNotifier = new QSocketNotifier(m_sockfd, QSocketNotifier::Exception, this);
-    connect(m_exceptionNotifier, &QSocketNotifier::activated,
-        this, &UnixSocket::handleSocketException);
+    emit connected();
 
     return QIODevice::open(QIODevice::ReadWrite);
 }
@@ -138,74 +114,76 @@ bool UnixSocket::setFd(int fd) {
 qint64 UnixSocket::readData(char *data, qint64 maxSize) {
     if(!isOpen())
         return -1;
-    qint64 rc = ::read(m_sockfd, data, maxSize);
-    if(rc < 0) {
-        if(errno == EPIPE || errno == ECONNRESET) {
-            close();
-            return rc;
-        }
-        m_err = errno;
-        setErrorString(strerror(m_err));
-        emit errorOccurred(m_err);
-    }
-
-    return rc;
+    qint64 size = qMin<qint64>(maxSize, m_readBuffer.size());
+    memmove(data, m_readBuffer.constData(), size);
+    m_readBuffer.remove(0, size);
+    return size;
 }
 
 qint64 UnixSocket::writeData(const char *data, qint64 maxSize) {
     if(!isOpen())
         return -1;
     
-    m_writeBuffor += QByteArray(data, maxSize);
+    m_writeBuffer += QByteArray(data, maxSize);
 
     handleWriteAvaliable();
-    if(m_writeNotifier)
-        m_writeNotifier->setEnabled(!m_writeBuffor.isEmpty());
+    m_writeNotifier.setEnabled(!m_writeBuffer.isEmpty());
 
     return maxSize;
 }
 
+void UnixSocket::handleReadAvaliable() {
+    char cbuf[8] = { 0 };
+    
+    qint64 bytesRead = 0;
+    qint64 tmpBytesRead = 0;
+
+    errno = 0;
+    do {
+        tmpBytesRead = ::read(m_sockfd, cbuf, 8);
+        if(errno == EAGAIN) break;
+        if(tmpBytesRead < 0) {
+            handleSocketException(errno);
+            break;
+        }
+        m_readBuffer.append(cbuf, tmpBytesRead);
+        bytesRead += tmpBytesRead;
+    } while(tmpBytesRead > 0);
+
+    if(bytesRead > 0) {
+        emit readyRead();
+    }
+}
+
 bool UnixSocket::handleWriteAvaliable() {
-    if(m_writeBuffor.isEmpty()) {
-        m_writeNotifier->setEnabled(false);
+    if(m_writeBuffer.isEmpty()) {
+        m_writeNotifier.setEnabled(false);
         return true;
     }
     
-    errno = 0;
-    ssize_t writtenBytes = ::write(m_sockfd, m_writeBuffor.data(), m_writeBuffor.size());
+    ssize_t writtenBytes = ::write(m_sockfd, m_writeBuffer.data(), m_writeBuffer.size());
     
-    if(writtenBytes > 0)
-        m_writeBuffor.remove(0, writtenBytes);
-    
-    if(errno != EAGAIN && errno != 0) {
-        close();
-        if(errno == EPIPE || errno == ECONNRESET)
-            return false;
-        m_err = errno;
-        setErrorString(strerror(m_err));
-        emit errorOccurred(m_err);
+    if(writtenBytes > 0) {
+        m_writeBuffer.remove(0, writtenBytes);
+        emit bytesWritten(writtenBytes);
+        return true;
     }
-
-    emit bytesWritten(writtenBytes);
-    
-    return true;
+    else if(writtenBytes < 0) {
+        handleSocketException(errno);
+    }
+    return false;
 }
 
 qint64 UnixSocket::bytesAvailable() const {
-    int result;
-    ioctl(m_sockfd, FIONREAD, &result);
-    return result + QIODevice::bytesAvailable();
+    return m_readBuffer.size() + QIODevice::bytesAvailable();
 }
 
 qint64 UnixSocket::bytesToWrite() const {
-    return m_writeBuffor.size() + QIODevice::bytesToWrite();
+    return m_writeBuffer.size() + QIODevice::bytesToWrite();
 }
 
 bool UnixSocket::canReadLine() const {
-    assert(false && "UnixSocket::canReadLine() is not implemented");
-    return 
-        // m_readBuffor.contains('\n') ||
-           QIODevice::canReadLine();
+    return m_readBuffer.contains('\n') || QIODevice::canReadLine();
 }
 
 bool UnixSocket::waitForReadyRead(int msecs) {
@@ -214,14 +192,15 @@ bool UnixSocket::waitForReadyRead(int msecs) {
     qint64 bytesRead;
 
     do {
+        handleReadAvaliable();
         bytesRead = bytesAvailable();
-    } while(isOpen() & bytesRead == 0 && deadline.remainingTime());
+    } while(isOpen() && bytesRead == 0 && deadline.remainingTime());
 
     return bytesRead > 0;
 }
 
 bool UnixSocket::waitForBytesWritten(int msecs) {
-    if(m_writeBuffor.isEmpty())
+    if(m_writeBuffer.isEmpty())
        return true;
     
     QDeadlineTimer deadline(msecs);
@@ -229,7 +208,7 @@ bool UnixSocket::waitForBytesWritten(int msecs) {
     do{
         if(!handleWriteAvaliable())
             return false;
-    } while(isOpen() && m_writeBuffor.size() > 0 && deadline.remainingTime());
+    } while(isOpen() && m_writeBuffer.size() > 0 && deadline.remainingTime());
 
     return true;
 }
@@ -267,24 +246,16 @@ bool UnixSocket::setBlocking(bool block) {
     return true;
 }
 
-void UnixSocket::handleSocketException() {
-    if(!isOpen())
-        return;
-    
-    int err = 0;
-    socklen_t optlen;
-    
-    if(getsockopt(m_sockfd, SOL_SOCKET, SO_ERROR, &err, &optlen) == -1) {
-        qWarning("An error occurred during getting socket error. %s", strerror(errno));
+void UnixSocket::handleSocketException(int error) {
+    if(error == 0 || error == EAGAIN)  {
         return;
     }
 
-    if(errno == EPIPE || errno == ECONNRESET) {
+    if(error == EPIPE || error == ECONNRESET) {
         close();
         return;
     }
 
-    m_err = err;
-    setErrorString(strerror(m_err));
+    setErrorString(strerror(m_err = error));
     emit errorOccurred(m_err);
 }

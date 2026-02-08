@@ -42,19 +42,20 @@ private:
     bool isBlocking();
 
     bool setFd(int fd);
+    void handleReadAvaliable();
     bool handleWriteAvaliable();
-    void handleSocketException();
+    void handleSocketException(int error);
 private:
     int m_sockfd = -1;
     struct sockaddr* m_addr = nullptr;
 
     int m_err = 0;
 
-    QByteArray m_writeBuffor;
+    QByteArray m_readBuffer;
+    QByteArray m_writeBuffer;
 
-    QSocketNotifier* m_readNotifier = nullptr;
-    QSocketNotifier* m_writeNotifier = nullptr;
-    QSocketNotifier* m_exceptionNotifier = nullptr;
+    QSocketNotifier m_readNotifier = QSocketNotifier(QSocketNotifier::Read, this);
+    QSocketNotifier m_writeNotifier = QSocketNotifier(QSocketNotifier::Write, this);
 
     friend class UnixSocketServer;
 };
