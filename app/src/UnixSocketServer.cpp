@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/un.h>
 
+#include "UnixSocket.hpp"
+
 UnixSocketServer::UnixSocketServer(QObject *parent) : QObject(parent) { }
 
 UnixSocketServer::~UnixSocketServer() {
@@ -113,7 +115,7 @@ void UnixSocketServer::close() {
                     "UnixSocketServer::close(): Failed to unlink socket: %s\n",
                     strerror(errno));
         }
-        delete m_addr;
+        delete (struct sockaddr_un*)m_addr;
         m_addr = nullptr;
     }
     ::close(m_sockfd);
@@ -136,7 +138,6 @@ bool UnixSocketServer::waitForNewConnection(int msec, bool *timedOut) {
             m_err = errno;
             m_errStr = "accept(): ";
             m_errStr += strerror(m_err);
-            ::close(fd);
             emit errorOccurred(m_err);
             return false;
         }
@@ -153,10 +154,12 @@ bool UnixSocketServer::waitForNewConnection(int msec, bool *timedOut) {
             return false;
         }
 
-        auto removeSock = [=] {
+        auto removeSock = [this, sock] {
             sock->disconnect(this, nullptr);
             m_clients.remove(sock);
-            m_pendingConnection.removeAll(sock);
+            if(m_pendingConnection.removeAll(sock)) {
+                sock->deleteLater();
+            }
         };
 
         connect(sock, &UnixSocket::destroyed, this, removeSock);

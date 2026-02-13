@@ -3,8 +3,10 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QSet>
+#include <QtCore/QQueue>
+#include <QtCore/QSocketNotifier>
 
-#include "UnixSocket.hpp"
+class UnixSocket;
 
 class UnixSocketServer : public QObject {
     Q_OBJECT
