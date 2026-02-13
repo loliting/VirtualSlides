@@ -10,7 +10,7 @@ public:
     
     static void CleanUp();
 
-    int Exec();
+    int exec();
 signals:
     void writeToSock(char c);
 private slots:
@@ -27,4 +27,5 @@ private:
 
     QString m_socketName;
     UnixSocket* m_socket = new UnixSocket(this);
+    QThread* m_thread = nullptr;
 };

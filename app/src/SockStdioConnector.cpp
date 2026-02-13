@@ -3,6 +3,7 @@
 #include <QtCore/QThread>
 
 #include <termios.h>
+#include <csignal>
 
 SockStdioConnectorApp* SockStdioConnectorApp::m_instance = nullptr;
 
@@ -22,7 +23,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    int ret = app->Exec();
+    int ret = app->exec();
     SockStdioConnectorApp::CleanUp();
     return ret;
 }
@@ -48,19 +49,17 @@ SockStdioConnectorApp* SockStdioConnectorApp::Instance(){
 }
 
 void SockStdioConnectorApp::CleanUp() {
-    delete m_instance->m_socket;
+    m_instance->m_socket->deleteLater();
     m_instance->m_socket = nullptr;
 
-    delete m_instance;
+    m_instance->deleteLater();
     m_instance = nullptr;
 }
 
 void SockStdioConnectorApp::readStdin() {
-    char c = getchar();;
-    while(m_instance && m_instance->m_socket && m_instance->m_socket->isOpen()){
-        emit m_instance->writeToSock(c);
-        c = getchar();
-    }
+    do{
+        emit m_instance->writeToSock(getchar());
+    } while(m_instance && m_instance->m_socket && m_instance->m_socket->isOpen());
 }
 
 void SockStdioConnectorApp::writeToSockImpl(char c){
@@ -68,9 +67,9 @@ void SockStdioConnectorApp::writeToSockImpl(char c){
 }
 
 void SockStdioConnectorApp::readSock() {
-    char buf[4];
-    off_t offset = 0;
-    uint8_t expectedCharSize = 0;
+    static char buf[4];
+    static off_t offset = 0;
+    static uint8_t expectedCharSize = 0;
     while(m_instance->m_socket->bytesAvailable() > 0) {
         qint64 rc = m_socket->readData(buf + offset, 1);
         if(rc > 0) {
@@ -113,16 +112,22 @@ void SockStdioConnectorApp::printSocketError(int err) {
     exit(1);
 }
 
-int SockStdioConnectorApp::Exec(){
+int SockStdioConnectorApp::exec() {
     if(m_socket->connectToServer(m_socketName) == false){
         QTextStream(stderr) << "Connecting to UDS \"" << m_socketName
             << "\" failed: " << m_socket->errorString() << '\n';
         return 1;
     }
 
-    connect(this, SIGNAL(writeToSock(char)), this, SLOT(writeToSockImpl(char)));
-    connect(m_socket, SIGNAL(readyRead()), this, SLOT(readSock(void)));
-    connect(m_socket, SIGNAL(errorOccurred(int)), this, SLOT(printSocketError(int)));
-    QThread::create(readStdin)->start();
+    connect(this, &SockStdioConnectorApp::writeToSock, this, &SockStdioConnectorApp::writeToSockImpl);
+    connect(m_socket, &UnixSocket::readyRead, this, &SockStdioConnectorApp::readSock);
+    connect(m_socket, &UnixSocket::disconnected, this, [this] {
+        /* We have a blocking call in another thread and this 
+         * is simplest way to enforce process termination */ 
+        raise(SIGINT);
+    }, Qt::QueuedConnection);
+    connect(m_socket, &UnixSocket::errorOccurred, this, &SockStdioConnectorApp::printSocketError);
+    m_thread = QThread::create(readStdin);
+    m_thread->start();
     return QCoreApplication::exec();
 }
