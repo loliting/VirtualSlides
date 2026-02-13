@@ -105,11 +105,11 @@ void tst_UnixSocket::testEchoServer() {
 
         QCOMPARE(serverSocket->errorString(), QString("Unknown error"));
         QCOMPARE(socket.errorString(), QString("Unknown error"));
+        serverSocket->close();
     }
 
-    socket.close();
     QCOMPARE(spyConnected.size(), 1);
-    QCOMPARE(spyDisconnected.size(), 1);
+    QVERIFY(spyDisconnected.size() == 1 || spyDisconnected.wait(1000));
     QCOMPARE(spyError.size(), 0);
 
     server.close();

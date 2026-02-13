@@ -140,10 +140,14 @@ void UnixSocket::handleReadAvaliable() {
 
     errno = 0;
     do {
-        tmpBytesRead = ::read(m_sockfd, cbuf, 8);
+        tmpBytesRead = ::recv(m_sockfd, cbuf, 8, 0);
         if(errno == EAGAIN) break;
         if(tmpBytesRead < 0) {
             handleSocketException(errno);
+            break;
+        }
+        else if (tmpBytesRead == 0) {
+            close();
             break;
         }
         m_readBuffer.append(cbuf, tmpBytesRead);
