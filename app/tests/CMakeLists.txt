@@ -15,9 +15,14 @@ add_executable(tst_unixsock
     tst_unixsock.cpp
 )
 
+add_executable(tst_vsockuser
+    tst_vsockuser.cpp
+)
+
 target_link_libraries(tst_vsock PRIVATE Qt6::Test Qt6::Core vs-common-sockets)
 target_link_libraries(tst_unixsock PRIVATE Qt6::Test Qt6::Core vs-common-sockets)
+target_link_libraries(tst_vsockuser PRIVATE Qt6::Test Qt6::Core vs-common-sockets)
 
 add_test(NAME tst_vsock COMMAND tst_vsock)
-
 add_test(NAME tst_unixsock COMMAND tst_unixsock)
+add_test(NAME tst_vsockuser COMMAND tst_vsockuser)

@@ -20,6 +20,10 @@ add_library(vs-common-sockets SHARED
     src/VSock.hpp
     src/VSockServer.cpp
     src/VSockServer.hpp
+    src/VSockUser.cpp
+    src/VSockUser.hpp
+    src/VSockUserServer.cpp
+    src/VSockUserServer.hpp
 )
 
 set(VS_SOURCES
