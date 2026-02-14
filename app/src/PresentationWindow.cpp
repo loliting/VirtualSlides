@@ -37,6 +37,8 @@ PresentationWindow::PresentationWindow(Presentation* presentation)
     addAction(m_nextSlideAction);
     addAction(m_previousSlideAction);
     addAction(m_toggleFullScreenAction);
+
+    setMinimumSize(640, 480);
 }
 
 PresentationWindow::~PresentationWindow() {
@@ -96,16 +98,9 @@ void PresentationWindow::setSlide(size_t index) {
     m_currentSlideIndex = newIndex;
 }
 
-void PresentationWindow::showFullScreen() {
-    QScreen *screen = QGuiApplication::primaryScreen();
-    move(screen->geometry().x(), screen->geometry().y());
-    resize(screen->geometry().width(), screen->geometry().height());
-    QMainWindow::showFullScreen();
-}
-
 void PresentationWindow::toggleFullScreen() {
     if(isFullScreen()) {
-        showMaximized();
+        showNormal();
     }
     else {
         showFullScreen();
