@@ -1,9 +1,13 @@
 #include "SockStdioConnector.hpp"
 
 #include <QtCore/QThread>
-
-#include <termios.h>
 #include <csignal>
+
+#ifdef HAVE_TERMIOS_H
+#include <termios.h>
+#else
+#error "This platform is not supported"
+#endif
 
 SockStdioConnectorApp* SockStdioConnectorApp::m_instance = nullptr;
 
@@ -13,10 +17,14 @@ SockStdioConnectorApp* SockStdioConnectorApp::m_instance = nullptr;
 
 
 int main(int argc, char* argv[]) {
+#ifdef HAVE_TERMIOS_H
     struct termios term;
     tcgetattr(fileno(stdin), &term);
     cfmakeraw(&term);
     tcsetattr(fileno(stdin), 0, &term);
+#else
+#error "This platform is not supported"
+#endif
 
     SockStdioConnectorApp* app = SockStdioConnectorApp::Instance(argc, argv);
     if(app == nullptr){

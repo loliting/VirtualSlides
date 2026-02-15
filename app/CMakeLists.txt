@@ -5,11 +5,15 @@ find_package(Qt6Widgets ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6Network ${QT_MINIMUM_VERSION} REQUIRED)
 
 find_package(qtermwidget6 2.0 REQUIRED)
-
 find_package(libzip REQUIRED)
+
+include(CheckIncludeFile)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
+
+check_include_file(termios.h HAVE_TERMIOS_H)
+
 
 add_library(vs-common-sockets SHARED
     src/UnixSocket.cpp
@@ -51,12 +55,7 @@ set(VS_SOURCES
 qt6_add_resources(VS_SOURCES Resources/res.qrc)
 
 add_executable(virtual-slides ${VS_SOURCES} Resources/res.qrc)
-
 target_compile_definitions(virtual-slides PRIVATE $<$<CONFIG:Debug>:DEBUG_BUILD=1>)
-
-
-add_executable(vs-sock-stdio-connector src/SockStdioConnector.cpp src/SockStdioConnector.hpp)
-
 target_link_libraries(virtual-slides PRIVATE
     Qt6::Core
     Qt6::Gui
@@ -66,6 +65,8 @@ target_link_libraries(virtual-slides PRIVATE
     vs-common-sockets
 )
 
+add_executable(vs-sock-stdio-connector src/SockStdioConnector.cpp src/SockStdioConnector.hpp)
+target_compile_definitions(vs-sock-stdio-connector PRIVATE $<${HAVE_TERMIOS_H}:HAVE_TERMIOS_H>)
 target_link_libraries(vs-sock-stdio-connector PRIVATE
     Qt6::Core
     vs-common-sockets
