@@ -20,10 +20,10 @@ add_library(vs-common-sockets SHARED
     src/UnixSocket.hpp
     src/UnixSocketServer.cpp
     src/UnixSocketServer.hpp
-    src/VSock.cpp
-    src/VSock.hpp
-    src/VSockServer.cpp
-    src/VSockServer.hpp
+    # src/VSock.cpp
+    # src/VSock.hpp
+    # src/VSockServer.cpp
+    # src/VSockServer.hpp
     src/VSockUser.cpp
     src/VSockUser.hpp
     src/VSockUserServer.cpp
