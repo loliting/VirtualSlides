@@ -6,9 +6,11 @@
 class GuestBridge;
 
 #include "VirtualMachine.hpp"
-#include "VSockServer.hpp"
 
 #include "third-party/nlohmann/json.hpp"
+
+class VSockUser;
+class VSockUserServer;
 
 class GuestBridge : public QObject {
     Q_OBJECT
@@ -25,16 +27,16 @@ private:
         Ok,
         Err
     };
-    void parseRequest(VSock* sock, QString request);
+    void parseRequest(VSockUser* sock, QString request);
     nlohmann::json statusResponse(ResponseStatus status, std::string errStr = "");
 private slots:
-    void handleVmSockReadReady(VSock* sock);
+    void handleVmSockReadReady(VSockUser* sock);
 private:
     bool m_started = false;
 
     VirtualMachine* m_vm = nullptr;
     
-    VSockServer* m_server = nullptr;
+    VSockUserServer* m_server = nullptr;
 
     QString requestStr;
 };

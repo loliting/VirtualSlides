@@ -11,12 +11,16 @@
 #include "Application.hpp"
 #include "Network.hpp"
 #include "GuestBridge.hpp"
+#include "VSockUserServer.hpp"
+#include "VSockUser.hpp"
 
 using namespace nlohmann;
 
-static uint32_t cidCounter = 1000 * 1000;
+static uint32_t cidCounter = 1e6;
 
-#define KERNEL_DEFAULT_CMD "acpi=off reboot=t panic=-1 console=ttyS0 root=/dev/vda rw selinux=0 init=/sbin/vs_init "
+#define KERNEL_MICROVM_OPTIONS "acpi=off reboot=t panic=-1 "
+#define KERNEL_AUX_OPTIONS "console=ttyS0 TERM=xterm-256color selinux=0 "
+#define KERNEL_DEFAULT_CMD KERNEL_MICROVM_OPTIONS KERNEL_AUX_OPTIONS "root=/dev/vda rw init=/sbin/vs_init "
 #define KERNEL_QUIET_CMD "quiet " KERNEL_DEFAULT_CMD 
 #define KERNEL_EARLYPRINTK_CMD "earlyprintk=ttyS0 " KERNEL_DEFAULT_CMD
 
@@ -244,6 +248,9 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
         m_tasks[task->id] = task;
     }
     
+    m_vsockUserHostServerPath = QFileInfo(QDir::tempPath() + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces)).absoluteFilePath();
+    m_vsockUserVmServerPath = QFileInfo(QDir::tempPath() + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces)).absoluteFilePath();
+    
     m_guestBridge = new GuestBridge(this);
     m_guestBridge->start();
     
@@ -253,10 +260,13 @@ VirtualMachine::VirtualMachine(json &vmObject, Presentation* pres) : m_presentat
 VirtualMachine::VirtualMachine(QString id, Network* net, bool hasWan, QString image, Presentation* pres)
     : m_presentation(pres), m_cid(cidCounter++), m_id(id), m_net(net),
     m_netId(net->id()), m_wan(hasWan), m_image(image),
-    m_macAddress(m_net->generateNewMacAddress()), m_hostname(m_id),
-    m_guestBridge(new GuestBridge(this))
+    m_macAddress(m_net->generateNewMacAddress()), m_hostname(m_id)
 {
     m_guestBridge->start();
+
+    m_vsockUserHostServerPath = QFileInfo(QDir::tempPath() + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces)).absoluteFilePath();
+    m_vsockUserVmServerPath = QFileInfo(QDir::tempPath() + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces)).absoluteFilePath();
+    m_guestBridge = new GuestBridge(this);
 
     createImageFile();
 }
@@ -295,14 +305,14 @@ QStringList VirtualMachine::getArgs(){
         << "-m" << QString::number(Config::getGuestMemSize()) + "M"
         << "-mem-prealloc" << "-no-reboot"
         << "-kernel" << Config::getGuestKernelPath()
-        << "-append" << KERNEL_QUIET_CMD + m_diskImage->initSysPath
+        << "-append" << KERNEL_DEFAULT_CMD + m_diskImage->initSysPath
         << "-nodefaults" << "-no-user-config" << "-nographic"
         << "-device" << "virtio-serial-device"
         << "-chardev" << "socket,id=char0,path=" + m_consoleServer->fullServerName()
         << "-serial" << "chardev:char0"
         << "-drive" << "id=root,file=" + m_imageFile.fileName() + ",format=qcow2,if=none"
         << "-device" << "virtio-blk-device,drive=root"
-        << "-device" << "vhost-vsock-device,guest-cid=" + QString::number(m_cid);
+        << "-device" << "virtio-vsock-device,guest-uds-path=" + m_vsockUserVmServerPath +",host-uds-path=" + m_vsockUserHostServerPath + ",cid=" + QString::number(m_cid);
     if(m_net && !m_macAddress.isEmpty())
         ret << "-netdev" << "socket,id=eth0,localaddr=127.0.0.1,mcast=" VNET_MCAST_ADDR ":" + QString::number(m_net->mcastPort())
             << "-device" << "virtio-net-device,netdev=eth0,mac=" + m_macAddress;
@@ -329,10 +339,22 @@ void VirtualMachine::handleNewConsoleSocketConnection() {
     if(m_consoleSocket){
         m_terminalSockets.append(conn);
         connect(conn, &UnixSocket::readyRead, this, [this, conn]{ handleClientConsoleSockReadReady(conn); });
+        connect(conn, &UnixSocket::errorOccurred, this, [this, conn] {
+            qDebug() << conn->errorString();
+            conn->close();
+            conn->deleteLater();
+            m_terminalSockets.removeAll(conn);
+        });
     }
-    else{
+    else {
         m_consoleSocket = conn;
         connect(m_consoleSocket, SIGNAL(readyRead()), this, SLOT(handleConsoleSockReadReady()));
+        connect(conn, &UnixSocket::errorOccurred, this, [this, conn] {
+            qDebug() << conn->errorString();
+            conn->close();
+            conn->deleteLater();
+            m_consoleSocket = nullptr;
+        });
         emit vmStarted();
     }
 }
@@ -361,22 +383,28 @@ void VirtualMachine::start() {
 
     m_vmProcess = new QProcess();
 
-    m_vmProcess->setProgram("qemu-system-x86_64");
+    m_vmProcess->setProgram(Application::applicationDirPath() + "/qemu/bin/qemu-system-x86_64");
     m_vmProcess->setArguments(getArgs());
-    m_vmProcess->start();
 
+    connect(m_vmProcess, &QProcess::readyReadStandardOutput, this, [this] {
+        QTextStream(stdout) << m_vmProcess->readAllStandardOutput();
+    });
+    connect(m_vmProcess, &QProcess::readyReadStandardError, this, [this] {
+        QTextStream(stdout) << m_vmProcess->readAllStandardError();
+    });
     connect(m_vmProcess, &QProcess::finished, this, &VirtualMachine::handleVmProcessFinished);
     connect(m_vmProcess, &QProcess::started, this, [this]{
         if(m_guestBridge && !m_guestBridge->isListening())
             m_guestBridge->start();
     });
 
+    m_vmProcess->start();
     m_isRunning = true;
 }
 
 void VirtualMachine::handleVmProcessFinished(int exitCode) {
     if(m_consoleSocket){
-        m_consoleSocket->disconnect();
+        m_consoleSocket->close();
         m_consoleSocket->deleteLater();
     }
     m_consoleSocket = nullptr;

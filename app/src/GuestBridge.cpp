@@ -2,6 +2,11 @@
 
 #include <QtWidgets/QMessageBox>
 
+#include "VSockUser.hpp"
+#include "VSockUserServer.hpp"
+
+const static QByteArray _downloadTest(384*1024*1024, 'a');
+
 using namespace nlohmann;
 
 
@@ -18,24 +23,24 @@ bool GuestBridge::start() {
     if(m_started)
         return true;
 
-    m_server = new VSockServer(this);
+    m_server = new VSockUserServer(this);
 
-    if(!m_server->listen(VSockServer::Host, m_vm->m_cid)) {
-        qWarning() << "VSockServer failed:" << m_server->errorString();
+    if(!m_server->listen(m_vm->m_vsockUserHostServerPath, VSockUserServer::Host, m_vm->m_cid)) {
+        qWarning() << "VSockUserServer failed:" << m_server->errorString();
         return false;
     }
 
-    connect(m_server, &VSockServer::newConnection, this, [this] {
-        VSock* sock = m_server->nextPendingConnection();
-        connect(sock, &VSock::readyRead, [sock, this] {
+    connect(m_server, &VSockUserServer::newConnection, this, [this] {
+        VSockUser* sock = m_server->nextPendingConnection();
+        connect(sock, &VSockUser::readyRead, [sock, this] {
             handleVmSockReadReady(sock);
         });
-        connect(sock, &VSock::errorOccurred, [sock] {
-            qWarning() << "An error occurred on vsock:" << sock->errorString();
+        connect(sock, &VSockUser::errorOccurred, [sock] {
+            qWarning() << "An error occurred on VSockUser:" << sock->errorString();
             sock->close();
             sock->deleteLater();
         });
-        connect(sock, &VSock::disconnected, [sock] {
+        connect(sock, &VSockUser::disconnected, [sock] {
             sock->deleteLater();
         });
     });
@@ -71,7 +76,7 @@ static json installFileToJson(InstallFile* installFile){
     return json;
 }
 
-void GuestBridge::parseRequest(VSock* sock, QString request) {
+void GuestBridge::parseRequest(VSockUser* sock, QString request) {
     std::string requestType;
     json response, jsonRequest;
     try {
@@ -93,8 +98,10 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
         response.update(statusResponse(ResponseStatus::Ok));
     }
     else if (requestType == "downloadTest") {
-        response["downloadTest"] = std::string(1024 * 1024 * 32, 'a');
-        response.update(statusResponse(ResponseStatus::Ok));
+        sock->write("{\"status\":\"ok\",\"downloadTest\":\"");
+        sock->write(_downloadTest); 
+        sock->write("\",\"downloadTestSize\":" + QString::number(_downloadTest.size()).toUtf8() + "}\x1e");
+        return;
     }
     else if (requestType == "getHostname") {
         response["hostname"] = m_vm->m_hostname.toStdString();
@@ -170,7 +177,7 @@ void GuestBridge::parseRequest(VSock* sock, QString request) {
     sock->write(jsonResponseStr);
 }
 
-void GuestBridge::handleVmSockReadReady(VSock* sock) {
+void GuestBridge::handleVmSockReadReady(VSockUser* sock) {
     requestStr += sock->readAll();
 
     while (requestStr.contains("\x1e") != false) {

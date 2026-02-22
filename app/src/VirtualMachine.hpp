@@ -52,7 +52,7 @@ struct InitScript
 struct Subtask
 {
     virtual nlohmann::json toJson();
-
+    virtual ~Subtask() = default;
 
     std::string id = std::string();
 
@@ -149,6 +149,8 @@ private:
     QList<UnixSocket*> m_terminalSockets;
 
     GuestBridge* m_guestBridge = nullptr;
+    QString m_vsockUserHostServerPath;
+    QString m_vsockUserVmServerPath;
     uint32_t m_cid;
 
     QMap<VirtualMachineWidget*, QSize> m_widgetSizes;
